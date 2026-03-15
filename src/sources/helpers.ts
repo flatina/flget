@@ -1,0 +1,229 @@
+import { basename, extname, join, relative } from "node:path";
+import { readdir } from "node:fs/promises";
+import type { DaemonEntry, PersistDef, PreparedPackage, RegistryOverride, RuntimeKind, ShimDef } from "../core/types";
+import { normalizePersistEntries } from "../core/persist";
+import { ensureRelativePathInsideRoot } from "../utils/fs";
+import { detectShimType, deriveShimName, wildcardToRegExp } from "../utils/strings";
+
+function normalizeShimOverride(
+  item: Partial<ShimDef> | undefined,
+  fallbackName?: string,
+): ShimDef | null {
+  if (!item?.target) {
+    return null;
+  }
+  return {
+    name: item.name ?? fallbackName ?? deriveShimName(item.target),
+    target: item.target,
+    args: item.args,
+    type: item.type ?? detectShimType(item.target),
+  };
+}
+
+export function normalizeOverrideBins(bins: RegistryOverride["bin"]): ShimDef[] {
+  if (!bins) {
+    return [];
+  }
+  return bins.flatMap((item) => {
+    const normalized = normalizeShimOverride(item);
+    return normalized ? [normalized] : [];
+  });
+}
+
+export function normalizeOverrideInteractiveEntries(entries: RegistryOverride["interactiveEntries"]): ShimDef[] {
+  if (!entries) {
+    return [];
+  }
+  return entries.flatMap((item) => {
+    const normalized = normalizeShimOverride(item);
+    return normalized ? [normalized] : [];
+  });
+}
+
+export function normalizeOverrideDaemonEntries(entries: RegistryOverride["daemonEntries"]): DaemonEntry[] {
+  if (!entries) {
+    return [];
+  }
+  return entries.flatMap((entry) => {
+    if (!entry?.name) {
+      return [];
+    }
+    const run = normalizeShimOverride(entry.run, entry.name);
+    if (!run) {
+      return [];
+    }
+    const stop = normalizeShimOverride(entry.stop, `${entry.name}-stop`) ?? undefined;
+    const status = normalizeShimOverride(entry.status, `${entry.name}-status`) ?? undefined;
+    return [{
+      name: entry.name,
+      run,
+      stop,
+      status,
+      restartPolicy: entry.restartPolicy,
+      dependsOn: Array.isArray(entry.dependsOn) ? entry.dependsOn.filter((value): value is string => typeof value === "string") : undefined,
+      autoStart: entry.autoStart === true ? true : undefined,
+    }];
+  });
+}
+
+export function normalizeOverridePersist(override: RegistryOverride | null): PersistDef[] {
+  return normalizePersistEntries(override?.persist);
+}
+
+export function normalizeOverrideWarnings(override: RegistryOverride | null): string[] {
+  if (!override?.warnings) {
+    return [];
+  }
+  return Array.isArray(override.warnings) ? override.warnings : [override.warnings];
+}
+
+export function normalizeOverrideNotes(override: RegistryOverride | null): string | null {
+  if (!override?.notes) {
+    return null;
+  }
+  return Array.isArray(override.notes) ? override.notes.join("\n") : override.notes;
+}
+
+export function dedupeShimDefs(entries: ShimDef[]): ShimDef[] {
+  const seen = new Set<string>();
+  const results: ShimDef[] = [];
+  for (const entry of entries) {
+    const key = `${entry.name}\u0000${entry.target}\u0000${entry.args ?? ""}\u0000${entry.type}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    results.push(entry);
+  }
+  return results;
+}
+
+function normalizeRelativeEntryPath(root: string, value: string): string {
+  return ensureRelativePathInsideRoot(root, value).replace(/\\/g, "/");
+}
+
+function validateShimDefs(root: string, entries: ShimDef[]): ShimDef[] {
+  return entries.map((entry) => ({
+    ...entry,
+    target: normalizeRelativeEntryPath(root, entry.target),
+  }));
+}
+
+function validateDaemonEntries(root: string, entries: DaemonEntry[]): DaemonEntry[] {
+  return entries.map((entry) => ({
+    ...entry,
+    run: {
+      ...entry.run,
+      target: normalizeRelativeEntryPath(root, entry.run.target),
+    },
+    stop: entry.stop ? {
+      ...entry.stop,
+      target: normalizeRelativeEntryPath(root, entry.stop.target),
+    } : undefined,
+    status: entry.status ? {
+      ...entry.status,
+      target: normalizeRelativeEntryPath(root, entry.status.target),
+    } : undefined,
+  }));
+}
+
+function validatePersistDefs(root: string, entries: PersistDef[]): PersistDef[] {
+  return entries.map((entry) => ({
+    source: normalizeRelativeEntryPath(root, entry.source),
+    target: normalizeRelativeEntryPath(root, entry.target),
+  }));
+}
+
+export function finalizePreparedPackage(stagingDir: string, prepared: PreparedPackage): PreparedPackage {
+  return {
+    ...prepared,
+    bin: validateShimDefs(stagingDir, prepared.bin),
+    interactiveEntries: prepared.interactiveEntries ? validateShimDefs(stagingDir, prepared.interactiveEntries) : undefined,
+    daemonEntries: prepared.daemonEntries ? validateDaemonEntries(stagingDir, prepared.daemonEntries) : undefined,
+    persist: validatePersistDefs(stagingDir, prepared.persist),
+    envAddPath: prepared.envAddPath?.map((entry) => normalizeRelativeEntryPath(stagingDir, entry)),
+  };
+}
+
+export function chooseAssetByPattern<T extends { name: string }>(assets: T[], pattern?: string): T | null {
+  if (!pattern) {
+    return null;
+  }
+  const matcher = wildcardToRegExp(pattern);
+  return assets.find((asset) => matcher.test(asset.name)) ?? null;
+}
+
+export async function collectExecutableCandidates(root: string, maxDepth: number = 3): Promise<string[]> {
+  const results: string[] = [];
+
+  async function walk(current: string, depth: number): Promise<void> {
+    if (depth > maxDepth) {
+      return;
+    }
+    const entries = await readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(current, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+      const extension = extname(entry.name).toLowerCase();
+      if ([".exe", ".cmd", ".bat", ".ps1", ".jar", ".py", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"].includes(extension)) {
+        results.push(relative(root, fullPath).replace(/\\/g, "/"));
+      }
+    }
+  }
+
+  await walk(root, 0);
+  return results;
+}
+
+export function chooseBestBinCandidate(repoName: string, candidates: string[]): ShimDef[] {
+  if (candidates.length === 0) {
+    return [];
+  }
+
+  const repo = repoName.toLowerCase();
+  const scored = candidates.map((candidate) => {
+    const name = basename(candidate, extname(candidate)).toLowerCase();
+    let score = 0;
+    if (name === repo) {
+      score += 100;
+    }
+    if (name.includes(repo)) {
+      score += 60;
+    }
+    score -= candidate.split("/").length * 2;
+    const type = detectShimType(candidate);
+    if (type === "exe") {
+      score += 10;
+    }
+    return { candidate, score, type };
+  }).sort((left, right) => right.score - left.score);
+
+  const winner = scored[0]!;
+  return [{
+    name: deriveShimName(winner.candidate),
+    target: winner.candidate,
+    type: winner.type,
+  }];
+}
+
+export function inferRuntimeFromBins(bin: ShimDef[], fallback: RuntimeKind = "unverified"): RuntimeKind {
+  if (bin.length === 0) {
+    return fallback;
+  }
+  if (bin.every((entry) => entry.type === "exe" || entry.type === "cmd" || entry.type === "ps1")) {
+    return "standalone";
+  }
+  if (bin.some((entry) => entry.type === "js" || entry.type === "ts")) {
+    return "bun-native";
+  }
+  if (bin.some((entry) => entry.type === "jar" || entry.type === "py" || entry.type === "other")) {
+    return "runtime-dependent";
+  }
+  return fallback;
+}

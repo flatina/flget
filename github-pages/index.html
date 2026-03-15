@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>flget by flatina</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #efe7db;
+      --panel: rgba(255, 252, 246, 0.86);
+      --fg: #201a14;
+      --muted: #63584c;
+      --line: rgba(84, 69, 56, 0.16);
+      --accent: #0f766e;
+      --accent-2: #164e63;
+      --shadow: 0 24px 60px rgba(38, 28, 16, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--fg);
+      background:
+        radial-gradient(circle at top left, rgba(22, 78, 99, 0.12), transparent 34%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 28%),
+        linear-gradient(180deg, #f6f0e6 0%, var(--bg) 100%);
+    }
+
+    main {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 56px 20px 72px;
+    }
+
+    .panel {
+      padding: 32px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      font: 600 0.82rem/1.2 "Segoe UI", sans-serif;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(2.4rem, 7vw, 4.5rem);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      margin: 0 0 16px;
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .command {
+      margin: 26px 0 16px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(15, 118, 110, 0.18);
+      background: #fffdf9;
+      font: 500 0.98rem/1.6 Consolas, "Courier New", monospace;
+      color: var(--fg);
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+      font: 600 0.96rem/1.3 "Segoe UI", sans-serif;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .note {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      font-size: 0.98rem;
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding: 24px 14px 44px;
+      }
+
+      .panel {
+        padding: 22px 18px;
+        border-radius: 18px;
+      }
+
+      .command {
+        padding: 14px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <p class="eyebrow">Windows-first package manager</p>
+      <h1>flget</h1>
+      <p>Directory-isolated installs. Rename-based updates. Portable by default.</p>
+      <p>Run the update script from the directory where you want to create or refresh the flget root.</p>
+      <div class="command"><code>cd C:\tools\flget
+powershell -c "irm https://flatina.github.io/flget/update.ps1 -OutFile .\update.ps1"
+.\update.ps1</code></div>
+      <div class="links">
+        <a href="update.ps1">update.ps1</a>
+        <a href="https://github.com/flatina/flget">GitHub</a>
+      </div>
+      <p class="note">The update script downloads <code>flget.js</code>, <code>flget.js.map</code>, <code>bun.exe</code>, <code>activate.ps1</code>, <code>update.ps1</code>, and <code>REGISTER_PATH.ps1</code>. The first <code>activate</code> run bootstraps <code>flget.root.toml</code> and creates <code>shims/flget.*</code> and <code>shims/bun.*</code>.</p>
+    </section>
+  </main>
+</body>
+</html>

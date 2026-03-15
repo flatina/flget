@@ -1,0 +1,143 @@
+function Resolve-FlgetBun {
+  $rootBun = Join-Path $PSScriptRoot "bun.exe"
+  if (Test-Path $rootBun) {
+    return [System.IO.Path]::GetFullPath($rootBun)
+  }
+
+  $parentBun = Join-Path (Split-Path -Parent $PSScriptRoot) "bun.exe"
+  if (Test-Path $parentBun) {
+    return [System.IO.Path]::GetFullPath($parentBun)
+  }
+
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
+  }
+
+  return $null
+}
+
+$env:FL_ROOT = $PSScriptRoot
+$resolvedBun = Resolve-FlgetBun
+
+if (-not $resolvedBun) {
+  Write-Error "bun.exe not found in the flget root, its parent directory, or PATH."
+  exit 1
+}
+
+New-Item -ItemType Directory -Force -Path "$PSScriptRoot\shims" | Out-Null
+if (-not (Test-Path "$PSScriptRoot\shims\flget.cmd")) {
+  Set-Content -LiteralPath "$PSScriptRoot\shims\flget.cmd" -Encoding ASCII -Value @"
+@echo off
+setlocal
+set "SHIMDIR=%~dp0"
+set "BUN=%SHIMDIR%\..\bun.exe"
+if not exist "%BUN%" set "BUN=%SHIMDIR%\..\..\bun.exe"
+if exist "%BUN%" goto run
+where bun >nul 2>nul
+if errorlevel 1 (
+  echo bun.exe not found in the flget root, its parent directory, or PATH. 1>&2
+  exit /b 1
+)
+set "BUN=bun"
+:run
+if "%BUN%"=="bun" (
+  bun "%SHIMDIR%\..\flget.js" %*
+) else (
+  "%BUN%" "%SHIMDIR%\..\flget.js" %*
+)
+"@
+}
+if (-not (Test-Path "$PSScriptRoot\shims\flget.ps1")) {
+  Set-Content -LiteralPath "$PSScriptRoot\shims\flget.ps1" -Encoding ASCII -Value @'
+$rootBun = Join-Path $PSScriptRoot "..\bun.exe"
+$parentBun = Join-Path $PSScriptRoot "..\..\bun.exe"
+if (Test-Path $rootBun) {
+  $bun = [System.IO.Path]::GetFullPath($rootBun)
+} elseif (Test-Path $parentBun) {
+  $bun = [System.IO.Path]::GetFullPath($parentBun)
+} else {
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if (-not $bunCommand) {
+    Write-Error "bun.exe not found in the flget root, its parent directory, or PATH."
+    exit 1
+  }
+  $bun = $bunCommand.Source
+}
+& $bun "$PSScriptRoot\..\flget.js" @args
+exit $LASTEXITCODE
+'@
+}
+if (-not (Test-Path "$PSScriptRoot\shims\bun.cmd")) {
+  Set-Content -LiteralPath "$PSScriptRoot\shims\bun.cmd" -Encoding ASCII -Value @"
+@echo off
+setlocal
+set "SHIMDIR=%~dp0"
+set "BUN=%SHIMDIR%\..\bun.exe"
+if not exist "%BUN%" set "BUN=%SHIMDIR%\..\..\bun.exe"
+if exist "%BUN%" goto run
+where bun >nul 2>nul
+if errorlevel 1 (
+  echo bun.exe not found in the flget root, its parent directory, or PATH. 1>&2
+  exit /b 1
+)
+set "BUN=bun"
+:run
+if "%BUN%"=="bun" (
+  bun %*
+) else (
+  "%BUN%" %*
+)
+"@
+}
+if (-not (Test-Path "$PSScriptRoot\shims\bun.ps1")) {
+  Set-Content -LiteralPath "$PSScriptRoot\shims\bun.ps1" -Encoding ASCII -Value @'
+$rootBun = Join-Path $PSScriptRoot "..\bun.exe"
+$parentBun = Join-Path $PSScriptRoot "..\..\bun.exe"
+if (Test-Path $rootBun) {
+  $bun = [System.IO.Path]::GetFullPath($rootBun)
+} elseif (Test-Path $parentBun) {
+  $bun = [System.IO.Path]::GetFullPath($parentBun)
+} else {
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if (-not $bunCommand) {
+    Write-Error "bun.exe not found in the flget root, its parent directory, or PATH."
+    exit 1
+  }
+  $bun = $bunCommand.Source
+}
+& $bun @args
+exit $LASTEXITCODE
+'@
+}
+
+if ((-not (Test-Path "$PSScriptRoot\flget.root.toml")) -and (Test-Path "$PSScriptRoot\flget.js")) {
+  & $resolvedBun "$PSScriptRoot\flget.js" env | Out-Null
+  try {
+    & $resolvedBun "$PSScriptRoot\flget.js" bucket update | Out-Null
+  } catch {
+  }
+}
+
+$env:FL_ACTIVE = "1"
+$env:PATH = "$env:FL_ROOT\shims;$env:PATH"
+
+$pathCache = Join-Path $PSScriptRoot "tmp\cache-env-paths.txt"
+if (Test-Path $pathCache) {
+  foreach ($line in Get-Content -LiteralPath $pathCache) {
+    if ($line) {
+      $env:PATH = "$env:FL_ROOT\$line;$env:PATH"
+    }
+  }
+}
+
+$setCache = Join-Path $PSScriptRoot "tmp\cache-env-sets.txt"
+if (Test-Path $setCache) {
+  foreach ($line in Get-Content -LiteralPath $setCache) {
+    if (-not $line) { continue }
+    $parts = $line -split "=", 2
+    if ($parts.Count -eq 2 -and $parts[0]) {
+      Set-Item -Path ("Env:{0}" -f $parts[0]) -Value $parts[1]
+    }
+  }
+}
