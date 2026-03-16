@@ -11,7 +11,7 @@
   - Rename-based install/update/persist migration
 - Focused on standalone and Bun-friendly ecosystems
   - App sources: `scoop`, `npm`, `ghr`, `npmgh`
-  - Agent skills: `flget skills ...`
+- Agent skills: `flget skills ...` with shims for declared built-in `.ts` entry scripts
 
 ### ⚠️ Notes
 
@@ -33,14 +33,16 @@ powershell -c "irm https://flatina.github.io/flget/update.ps1 -OutFile .\update.
 ## ⚡ Quick Start
 
 ```powershell
-.\activate.ps1  # session PATH setup
+.\activate.ps1                        # session PATH setup
 flget --version
 
-flget install 7zip --source scoop
+flget search 7zip
+flget install 7zip                     # prompts if ambiguous
+flget install 7zip --source scoop      # source-scoped install
 flget install ripgrep --source ghr     # source-scoped GitHub Releases query
 flget install typescript --source npm  # source-scoped npm registry query
 flget install pnpm --source npmgh      # source-scoped GitHub source repo query
-flget skills install openai/codex      # install an agent skill repo and create declared shims
+flget skills install flatina/cowsay-ts # install an agent skill repo and create shims for declared built-in .ts entry scripts
 ```
 - Use a fully-qualified ref such as `ghr:<owner>/<repo>` when you need an exact non-interactive install
 - Update flget itself with `flget update` or `.\update.ps1`
@@ -168,7 +170,7 @@ flget registry <list|add|remove|update> ...
 # agent skills
 flget skills <find|install|list|info|update|remove> ...
 flget skills <search|add|ls|upgrade|rm> ...            # aliases
-flget skills install cowsay-ts                         # installs an agent skill repo and creates declared shims
+flget skills install flatina/cowsay-ts                 # installs an agent skill repo and creates shims for declared built-in .ts entry scripts
 
 # source-scoped install query
 flget install cowsay --source scoop
