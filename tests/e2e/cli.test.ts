@@ -173,6 +173,40 @@ Write-Host "mock self update"
     expect(reset.stderr).toContain("Usage: flget reset <package> [--source <source>]");
   });
 
+  test("search --source scopes results the same way as a source-prefixed query", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const bucketRepo = join(workspace.dir, "bucket-search-flag");
+    await mkdir(join(bucketRepo, "bucket"), { recursive: true });
+
+    try {
+      await runGit(workspace.dir, ["init", bucketRepo]);
+      await runGit(bucketRepo, ["config", "user.email", "e2e@example.com"]);
+      await runGit(bucketRepo, ["config", "user.name", "E2E"]);
+      await writeJson(join(bucketRepo, "bucket", "demo.json"), {
+        version: "1.0.0",
+        url: "https://example.test/demo.exe",
+        hash: "a".repeat(64),
+        bin: [["demo.exe", "demo"]],
+      });
+      await runGit(bucketRepo, ["add", "."]);
+      await runGit(bucketRepo, ["commit", "-m", "add search manifest"]);
+
+      await bootstrapRoot(root);
+      await runCli(["bucket", "add", "local", bucketRepo], root);
+
+      const flagged = await runCli(["search", "demo", "--source", "scoop"], root);
+      const prefixed = await runCli(["search", "scoop:demo"], root);
+      expect(flagged.stdout).toBe(prefixed.stdout);
+      expect(flagged.stdout).toContain("scoop:local/demo");
+
+      const conflicting = await runProcess([process.execPath, cliPath, "search", "scoop:demo", "--source", "npm"], root);
+      expect(conflicting.exitCode).toBe(1);
+      expect(conflicting.stderr).toContain("Use either a source-prefixed query or --source, not both.");
+    } finally {
+    }
+  });
+
   test("root add/list/first/last/remove manage offline roots in config order", async () => {
     const workspace = await makeWorkspace();
     const root = join(workspace.dir, "root");

@@ -29,7 +29,7 @@ Usage:
   flget list [--json]
   flget fund [<package>] [--json]
   flget info <package>
-  flget search <query>
+  flget search <query> [--source <source>]
   flget skills <find|install|list|info|update|remove> ...
   flget env
   flget repair [package]
@@ -176,11 +176,11 @@ const COMMANDS: CommandSpec[] = [
   defineRuntimeCommand({
     name: "search",
     contextMode: "existing",
-    async run(parsed, _installOptions, context) {
+    async run(parsed, installOptions, context) {
       if (!parsed.positional[0]) {
         throw new Error("Usage: flget search <query>");
       }
-      await runSearchCommand(context, parsed.positional[0]);
+      await runSearchCommand(context, parsed.positional[0], installOptions.source);
     },
   }),
   defineRuntimeCommand({

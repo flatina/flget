@@ -38,6 +38,24 @@ export function parseSearchQuery(queryInput: string): { scope: SearchScope; quer
   };
 }
 
+export function applySearchSource(queryInput: string, source?: InstallSource): string {
+  const trimmed = queryInput.trim();
+  if (!source) {
+    return trimmed;
+  }
+
+  const parsed = parseSearchQuery(trimmed);
+  if (parsed.scope === null) {
+    return `${source}:${trimmed}`;
+  }
+
+  if (parsed.scope !== source) {
+    throw new Error("Use either a source-prefixed query or --source, not both.");
+  }
+
+  return trimmed;
+}
+
 function scoreLocalMeta(meta: PackageMeta, query: string): number {
   const values = [meta.id, meta.displayName, meta.sourceRef, ...(meta.bin.map((bin) => bin.name))];
   if (values.some((value) => value.toLowerCase() === query)) {
@@ -177,12 +195,12 @@ export async function findExactInstallMatches(
   return dedupeMatches(await collectSourceMatches(context, scope, query, options ?? {}, "exact"));
 }
 
-export async function runSearchCommand(context: RuntimeContext, queryInput: string): Promise<void> {
+export async function runSearchCommand(context: RuntimeContext, queryInput: string, source?: InstallSource): Promise<void> {
   if (!queryInput) {
     throw new Error("Usage: flget search <query>");
   }
 
-  const results = await findSearchMatches(context, queryInput, { includeRoots: true });
+  const results = await findSearchMatches(context, applySearchSource(queryInput, source), { includeRoots: true });
   if (results.length === 0) {
     console.log("No matches found.");
     return;
