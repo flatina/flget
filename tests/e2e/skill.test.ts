@@ -3,11 +3,13 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   bootstrapRoot,
+  cliPath,
   createMockGitHubServer,
   createSkillTarball,
+  createTarGz,
   createWorkspaceManager,
-  fixtureRoot,
   runCli,
+  runProcess,
   type MockGitHubState,
 } from "./helpers";
 
@@ -77,17 +79,294 @@ describe("skill e2e", () => {
       expect(search.stdout).toContain("skill:mock/test-skill");
 
       const install = await runCli(["skills", "add", "mock/test-skill"], root, env);
-      expect(install.stdout).toContain("Installed test-skill@777777777777");
+      expect(install.stdout).toContain("Installed demo-skill@777777777777");
 
       const list = await runCli(["skills", "ls"], root, env);
-      expect(list.stdout).toContain("test-skill 777777777777");
+      expect(list.stdout).toContain("demo-skill 777777777777");
 
       state.skillSha = "8888888888888888888888888888888888888888";
       const update = await runCli(["skills", "upgrade", "--all"], root, env);
-      expect(update.stdout).toContain("Updated test-skill: 777777777777 -> 888888888888");
+      expect(update.stdout).toContain("Updated demo-skill: 777777777777 -> 888888888888");
 
-      const remove = await runCli(["skills", "rm", "test-skill"], root, env);
-      expect(remove.stdout).toContain("Removed test-skill");
+      const remove = await runCli(["skills", "rm", "demo-skill"], root, env);
+      expect(remove.stdout).toContain("Removed demo-skill");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skills add <repo> --all installs all skills in the repository", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "abababababababababababababababababababab",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "abababababababababababababababababababab": await createTarGz({
+          ["skills/cowsay-ts/SKILL.md"]: `---
+name: cowsay-ts
+description: Cow skill
+shims:
+  - scripts/cowsay.ts
+---
+
+# cowsay-ts
+`,
+          ["skills/cowsay-ts/scripts/cowsay.ts"]: "console.log('moo');\n",
+          ["skills/hello-ts/SKILL.md"]: `---
+name: hello-ts
+description: Hello skill
+shims:
+  - scripts/hello.ts
+---
+
+# hello-ts
+`,
+          ["skills/hello-ts/scripts/hello.ts"]: "console.log('hello');\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const install = await runCli(["skills", "add", "mock/test-skill", "--all"], root, env);
+      expect(install.stdout).toContain("Installed cowsay-ts@abababababab");
+      expect(install.stdout).toContain("Installed hello-ts@abababababab");
+
+      const list = await runCli(["skills", "list"], root, env);
+      expect(list.stdout).toContain("cowsay-ts abababababab");
+      expect(list.stdout).toContain("hello-ts abababababab");
+
+      expect(await Bun.file(join(root, "shims", "cowsay.cmd")).exists()).toBe(true);
+      expect(await Bun.file(join(root, "shims", "hello.cmd")).exists()).toBe(true);
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skills add <repo> lists available skills with --list", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "efefefefefefefefefefefefefefefefefefefef",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "efefefefefefefefefefefefefefefefefefefef": await createTarGz({
+          ["skills/cowsay-ts/SKILL.md"]: `---
+name: cowsay-ts
+description: Cow skill
+shims:
+  - scripts/cowsay.ts
+---
+
+# cowsay-ts
+`,
+          ["skills/cowsay-ts/scripts/cowsay.ts"]: "console.log('moo');\n",
+          ["skills/hello-ts/SKILL.md"]: `---
+name: hello-ts
+description: Hello skill
+shims:
+  - scripts/hello.ts
+---
+
+# hello-ts
+`,
+          ["skills/hello-ts/scripts/hello.ts"]: "console.log('hello');\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const listed = await runCli(["skills", "add", "mock/test-skill", "--list"], root, env);
+      expect(listed.stdout).toContain("cowsay-ts");
+      expect(listed.stdout).toContain("hello-ts");
+
+      const list = await runCli(["skills", "list"], root, env);
+      expect(list.stdout).toContain("No skills installed.");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skills add <repo> --skill <id> installs only the selected skill", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd": await createTarGz({
+          ["skills/cowsay-ts/SKILL.md"]: `---
+name: cowsay-ts
+description: Cow skill
+shims:
+  - scripts/cowsay.ts
+---
+
+# cowsay-ts
+`,
+          ["skills/cowsay-ts/scripts/cowsay.ts"]: "console.log('moo');\n",
+          ["skills/hello-ts/SKILL.md"]: `---
+name: hello-ts
+description: Hello skill
+shims:
+  - scripts/hello.ts
+---
+
+# hello-ts
+`,
+          ["skills/hello-ts/scripts/hello.ts"]: "console.log('hello');\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const install = await runCli(["skills", "add", "mock/test-skill", "--skill", "cowsay-ts"], root, env);
+      expect(install.stdout).toContain("Installed cowsay-ts@cdcdcdcdcdcd");
+      expect(install.stdout).not.toContain("hello-ts");
+
+      const list = await runCli(["skills", "list"], root, env);
+      expect(list.stdout).toContain("cowsay-ts cdcdcdcdcdcd");
+      expect(list.stdout).not.toContain("hello-ts");
+
+      expect(await Bun.file(join(root, "shims", "cowsay.cmd")).exists()).toBe(true);
+      expect(await Bun.file(join(root, "shims", "hello.cmd")).exists()).toBe(false);
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skills add <repo> accepts repeated --skill flags", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "edededededededededededededededededededed",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "edededededededededededededededededededed": await createTarGz({
+          ["skills/cowsay-ts/SKILL.md"]: `---
+name: cowsay-ts
+description: Cow skill
+shims:
+  - scripts/cowsay.ts
+---
+
+# cowsay-ts
+`,
+          ["skills/cowsay-ts/scripts/cowsay.ts"]: "console.log('moo');\n",
+          ["skills/hello-ts/SKILL.md"]: `---
+name: hello-ts
+description: Hello skill
+shims:
+  - scripts/hello.ts
+---
+
+# hello-ts
+`,
+          ["skills/hello-ts/scripts/hello.ts"]: "console.log('hello');\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const install = await runCli(["skills", "add", "mock/test-skill", "--skill", "cowsay-ts", "--skill", "hello-ts"], root, env);
+      expect(install.stdout).toContain("Installed cowsay-ts@edededededed");
+      expect(install.stdout).toContain("Installed hello-ts@edededededed");
+
+      const list = await runCli(["skills", "list"], root, env);
+      expect(list.stdout).toContain("cowsay-ts edededededed");
+      expect(list.stdout).toContain("hello-ts edededededed");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skills add <repo> without selection errors non-interactively when multiple skills exist", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "dededededededededededededededededededede",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "dededededededededededededededededededede": await createTarGz({
+          ["skills/cowsay-ts/SKILL.md"]: `---
+name: cowsay-ts
+description: Cow skill
+shims:
+  - scripts/cowsay.ts
+---
+
+# cowsay-ts
+`,
+          ["skills/cowsay-ts/scripts/cowsay.ts"]: "console.log('moo');\n",
+          ["skills/hello-ts/SKILL.md"]: `---
+name: hello-ts
+description: Hello skill
+shims:
+  - scripts/hello.ts
+---
+
+# hello-ts
+`,
+          ["skills/hello-ts/scripts/hello.ts"]: "console.log('hello');\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const result = await runProcess([process.execPath, cliPath, "skills", "add", "mock/test-skill"], root, env);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Multiple skills found in mock/test-skill.");
+      expect(result.stderr).toContain("--skill <name>, --all, or --list");
     } finally {
       server.stop(true);
     }
@@ -235,6 +514,113 @@ describe("skill e2e", () => {
       expect(info.bin[0]).toMatchObject({ name: "demo-skill-cli", target: "scripts/demo-skill.ts" });
       expect(info.skill?.folderPath).toBe(".codex/skills/demo-skill");
       expect(await readFile(join(root, "agents", "skills", "test-skill", "current", "scripts", "demo-skill.ts"), "utf8")).toContain("codex-skill");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skill install resolves #subpath under a skills/ directory", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": await createTarGz({
+          ["skills/cowsay-ts/SKILL.md"]: `---
+name: cowsay-ts
+description: Skill in a nested skills directory
+shims:
+  - scripts/cowsay.ts
+---
+
+# cowsay-ts
+`,
+          ["skills/cowsay-ts/scripts/cowsay.ts"]: "console.log('moo');\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const install = await runCli(["install", "skill:mock/test-skill#cowsay-ts"], root, env);
+      expect(install.stdout).toContain("Installed cowsay-ts@aaaaaaaaaaaa");
+
+      const info = JSON.parse((await runCli(["info", "cowsay-ts"], root, env)).stdout) as {
+        displayName: string;
+        skill?: { folderPath: string };
+      };
+      expect(info.displayName).toBe("cowsay-ts");
+      expect(info.skill?.folderPath).toBeDefined();
+      expect(["cowsay-ts", "skills/cowsay-ts"]).toContain(info.skill?.folderPath ?? "");
+      expect(await Bun.file(join(root, "shims", "cowsay.cmd")).exists()).toBe(true);
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("skill shims support shorthand entries and per-entry runners", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockGitHubState = {
+      releaseTag: "v1.0.0",
+      npmReleaseTag: "v1.0.0",
+      skillSha: "9999999999999999999999999999999999999999",
+      releaseAssets: {},
+      npmTarballs: {},
+      skillTarballs: {
+        "9999999999999999999999999999999999999999": await createTarGz({
+          ["skills/demo-skill/SKILL.md"]: `---
+name: demo-skill
+description: Skill with mixed shims
+shims:
+  - scripts/tool.py
+  - target: scripts/deploy.sh
+    name: deploy
+    runner: bash
+---
+
+# Demo Skill
+`,
+          ["skills/demo-skill/scripts/tool.py"]: "print('tool')\n",
+          ["skills/demo-skill/scripts/deploy.sh"]: "echo deploy\n",
+        }),
+      },
+      requiredAuthToken: undefined,
+    };
+    const server = createMockGitHubServer(state);
+    const env = {
+      FLGET_GITHUB_API_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+
+      const install = await runCli(["install", "skill:mock/test-skill"], root, env);
+      expect(install.stdout).toContain("Installed test-skill@999999999999");
+
+      const info = JSON.parse((await runCli(["info", "test-skill"], root, env)).stdout) as {
+        runtime: string;
+        bin: Array<{ name: string; target: string; runner?: string }>;
+      };
+      expect(info.runtime).toBe("runtime-dependent");
+      expect(info.bin).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: "tool", target: "scripts/tool.py", runner: "python" }),
+        expect.objectContaining({ name: "deploy", target: "scripts/deploy.sh", runner: "bash" }),
+      ]));
+
+      const bashShim = await readFile(join(root, "shims", "deploy.cmd"), "utf8");
+      expect(bashShim).toContain("bash");
+      expect(bashShim).toContain("deploy.sh");
     } finally {
       server.stop(true);
     }

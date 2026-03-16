@@ -210,10 +210,9 @@ export async function createSkillTarball(
     [`${baseDir}/SKILL.md`]: `---
 name: demo-skill
 description: Skill ${label}
-flget:
-  shims:
-    - name: demo-skill-cli
-      target: scripts/demo-skill.ts
+shims:
+  - target: scripts/demo-skill.ts
+    name: demo-skill-cli
 ---
 
 # Demo Skill

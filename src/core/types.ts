@@ -125,11 +125,14 @@ export interface SkillMeta {
   folderHash: string;
 }
 
+export type ShimRunner = "direct" | "cmd" | "powershell" | "java" | "python" | "bun" | "bash";
+
 export interface ShimDef {
   name: string;
   target: string;
   args?: string;
   type: "exe" | "cmd" | "ps1" | "jar" | "py" | "js" | "ts" | "other";
+  runner?: ShimRunner;
 }
 
 export interface DaemonEntry {

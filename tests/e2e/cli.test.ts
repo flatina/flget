@@ -26,13 +26,13 @@ describe("flget CLI surface", () => {
   test("--version prints version", async () => {
     const result = await runProcess([process.execPath, cliPath, "--version"], fixtureRoot);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe("flget 0.1.0");
+    expect(result.stdout.trim()).toBe("flget 0.1.1");
   });
 
   test("-v prints version", async () => {
     const result = await runProcess([process.execPath, cliPath, "-v"], fixtureRoot);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe("flget 0.1.0");
+    expect(result.stdout.trim()).toBe("flget 0.1.1");
   });
 
   test("--help prints expanded help", async () => {

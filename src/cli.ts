@@ -16,7 +16,7 @@ import { runUpdateCommand } from "./commands/update";
 import type { Arch, InstallOptions, InstallSource, RuntimeContext } from "./core/types";
 import { getBooleanFlag, getStringFlag, parseCliArgs, type ParsedCliArgs } from "./utils/cli";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 function printHelp(): void {
   console.log(`flget v${VERSION}
@@ -64,7 +64,10 @@ Install options:
   --force, -f
   --no-scripts
   --no-hash
-  --arch <arch>`);
+  --arch <arch>
+  --skill <skill-id>   (repeatable; for flget skills install <owner>/<repo>)
+  --list               (for flget skills install <owner>/<repo>)
+  --all                (for flget skills install/update)`);
 }
 
 type RuntimeContextMode = "existing" | "create" | ((parsed: ParsedCliArgs) => "existing" | "create");
