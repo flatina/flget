@@ -33,6 +33,10 @@ try {
 
     $flgetCommand = Get-Command flget -ErrorAction Stop
     Assert-StartsWithPath $flgetCommand.Source $deployRoot "flget should resolve from the deployed root"
+    $mainBucketPath = Join-Path $deployRoot "buckets\main"
+    if (-not (Test-Path -LiteralPath $mainBucketPath)) {
+      throw "Initial activate should sync the default Scoop bucket: $mainBucketPath"
+    }
 
     Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Checking flget version"
     Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("install", $packageId, "--source", "scoop") -WorkingDirectory $deployRoot -Label "Installing scoop package $packageId"

@@ -83,6 +83,43 @@ function Invoke-EnvRefresh {
   }
 }
 
+function Test-BucketBootstrapNeeded {
+  param([string]$Root)
+
+  $configPath = Join-Path $Root "flget.root.toml"
+  if (-not (Test-Path -LiteralPath $configPath)) {
+    return $true
+  }
+
+  $hasConfiguredBuckets = Select-String -LiteralPath $configPath -Pattern '^\s*\[\[buckets\]\]\s*$' -Quiet
+  if (-not $hasConfiguredBuckets) {
+    return $false
+  }
+
+  $bucketRoot = Join-Path $Root "buckets"
+  if (-not (Test-Path -LiteralPath $bucketRoot)) {
+    return $true
+  }
+
+  $bucketDir = Get-ChildItem -LiteralPath $bucketRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+  return $null -eq $bucketDir
+}
+
+function Invoke-BucketBootstrapIfNeeded {
+  param([string]$Root)
+
+  if (-not (Test-BucketBootstrapNeeded -Root $Root)) {
+    return
+  }
+
+  $bunExe = Join-Path $Root "bun.exe"
+  $cliPath = Join-Path $Root "flget.js"
+  & $bunExe $cliPath bucket update | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "flget bucket update failed with exit code ${LASTEXITCODE}"
+  }
+}
+
 $resolvedRoot = [System.IO.Path]::GetFullPath($(if ($RootPath) { $RootPath } else { (Get-Location).Path }))
 $normalizedBaseUrl = $BaseUrl.TrimEnd("/")
 
@@ -175,6 +212,11 @@ try {
 
   Write-Step "Refreshing root env caches"
   Invoke-EnvRefresh -Root $resolvedRoot
+  try {
+    Invoke-BucketBootstrapIfNeeded -Root $resolvedRoot
+  } catch {
+    Write-Warning "Initial bucket sync skipped: $($_.Exception.Message)"
+  }
 
   Write-Host ""
   Write-Host "flget updated at $resolvedRoot"
