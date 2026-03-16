@@ -1,8 +1,9 @@
 import { join } from "node:path";
-import type { PackageMeta, ShimDef } from "./types";
+import type { PackageMeta, ShimDef, ShimRunner } from "./types";
 import { getPackageBaseRelativePath } from "./package-layout";
 import { listPackageMetas, listWinnerPackageMetas } from "./metadata";
 import { ensureDir, removePath, writeText } from "../utils/fs";
+import { inferShimRunner } from "../utils/strings";
 
 function renderCmdWrapper(command: string): string {
   return `@echo off
@@ -83,6 +84,35 @@ function renderPowerShellBunRunner(target: string, args: string): string {
   );
 }
 
+function resolveShimRunner(shim: ShimDef): ShimRunner {
+  if (shim.runner) {
+    return shim.runner;
+  }
+
+  const inferred = inferShimRunner(shim.target);
+  if (inferred) {
+    return inferred;
+  }
+
+  switch (shim.type) {
+    case "cmd":
+      return "cmd";
+    case "ps1":
+      return "powershell";
+    case "jar":
+      return "java";
+    case "py":
+      return "python";
+    case "js":
+    case "ts":
+      return "bun";
+    case "exe":
+    case "other":
+    default:
+      return "direct";
+  }
+}
+
 function getCmdShimTarget(id: string, sourceType: PackageMeta["sourceType"], shim: ShimDef): string {
   const baseDir = getPackageBaseRelativePath(sourceType, id);
   return `%SHIMDIR%\\..\\${baseDir}\\current\\${shim.target.replace(/\//g, "\\")}`;
@@ -96,21 +126,22 @@ function getPowerShellShimTarget(id: string, sourceType: PackageMeta["sourceType
 function renderCmdShim(id: string, sourceType: PackageMeta["sourceType"], shim: ShimDef): string {
   const target = getCmdShimTarget(id, sourceType, shim);
   const args = shim.args ? ` ${shim.args}` : "";
+  const runner = resolveShimRunner(shim);
 
-  switch (shim.type) {
+  switch (runner) {
     case "cmd":
       return renderCmdWrapper(`call "${target}"${args} %*`);
-    case "ps1":
+    case "powershell":
       return renderCmdWrapper(`powershell -NoProfile -ExecutionPolicy Bypass -File "${target}"${args} %*`);
-    case "jar":
+    case "java":
       return renderCmdWrapper(`java -jar "${target}"${args} %*`);
-    case "py":
+    case "python":
       return renderCmdWrapper(`python "${target}"${args} %*`);
-    case "js":
-    case "ts":
+    case "bun":
       return renderCmdBunRunner(target, args);
-    case "exe":
-    case "other":
+    case "bash":
+      return renderCmdWrapper(`bash "${target}"${args} %*`);
+    case "direct":
     default:
       return renderCmdWrapper(`"${target}"${args} %*`);
   }
@@ -119,21 +150,22 @@ function renderCmdShim(id: string, sourceType: PackageMeta["sourceType"], shim: 
 function renderPowerShellShim(id: string, sourceType: PackageMeta["sourceType"], shim: ShimDef): string {
   const target = getPowerShellShimTarget(id, sourceType, shim);
   const args = shim.args ? ` ${shim.args}` : "";
+  const runner = resolveShimRunner(shim);
 
-  switch (shim.type) {
+  switch (runner) {
     case "cmd":
       return renderPowerShellWrapper(`& cmd /c "call \`"$target\`"${args} $args"`, `$target = "${target}"`);
-    case "ps1":
+    case "powershell":
       return renderPowerShellWrapper(`& powershell -NoProfile -ExecutionPolicy Bypass -File $target${args} @args`, `$target = "${target}"`);
-    case "jar":
+    case "java":
       return renderPowerShellWrapper(`& java -jar $target${args} @args`, `$target = "${target}"`);
-    case "py":
+    case "python":
       return renderPowerShellWrapper(`& python $target${args} @args`, `$target = "${target}"`);
-    case "js":
-    case "ts":
+    case "bun":
       return renderPowerShellBunRunner(target, args);
-    case "exe":
-    case "other":
+    case "bash":
+      return renderPowerShellWrapper(`& bash $target${args} @args`, `$target = "${target}"`);
+    case "direct":
     default:
       return renderPowerShellWrapper(`& $target${args} @args`, `$target = "${target}"`);
   }

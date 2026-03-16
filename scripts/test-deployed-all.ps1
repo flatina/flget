@@ -13,7 +13,8 @@ $scripts = @(
   "test-deployed-scoop.ps1",
   "test-deployed-npm.ps1",
   "test-deployed-ghr.ps1",
-  "test-deployed-npmgh.ps1"
+  "test-deployed-npmgh.ps1",
+  "test-deployed-skills.ps1"
 )
 
 if (-not $SkipBuild) {
@@ -32,5 +33,8 @@ if (-not $SkipBuild) {
 foreach ($script in $scripts) {
   $scriptPath = Join-Path $PSScriptRoot $script
   Write-Host "==> Running $script"
-  & $scriptPath -SkipBuild
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath -SkipBuild
+  if ($LASTEXITCODE -ne 0) {
+    throw "$script failed with exit code ${LASTEXITCODE}"
+  }
 }

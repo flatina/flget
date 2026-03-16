@@ -3,7 +3,7 @@ import { readdir } from "node:fs/promises";
 import type { DaemonEntry, PersistDef, PreparedPackage, RegistryOverride, RuntimeKind, ShimDef } from "../core/types";
 import { normalizePersistEntries } from "../core/persist";
 import { ensureRelativePathInsideRoot } from "../utils/fs";
-import { detectShimType, deriveShimName, wildcardToRegExp } from "../utils/strings";
+import { detectShimType, deriveShimName, inferShimRunner, wildcardToRegExp } from "../utils/strings";
 
 function normalizeShimOverride(
   item: Partial<ShimDef> | undefined,
@@ -17,6 +17,7 @@ function normalizeShimOverride(
     target: item.target,
     args: item.args,
     type: item.type ?? detectShimType(item.target),
+    runner: item.runner,
   };
 }
 
@@ -88,7 +89,7 @@ export function dedupeShimDefs(entries: ShimDef[]): ShimDef[] {
   const seen = new Set<string>();
   const results: ShimDef[] = [];
   for (const entry of entries) {
-    const key = `${entry.name}\u0000${entry.target}\u0000${entry.args ?? ""}\u0000${entry.type}`;
+    const key = `${entry.name}\u0000${entry.target}\u0000${entry.args ?? ""}\u0000${entry.type}\u0000${entry.runner ?? ""}`;
     if (seen.has(key)) {
       continue;
     }
@@ -216,13 +217,27 @@ export function inferRuntimeFromBins(bin: ShimDef[], fallback: RuntimeKind = "un
   if (bin.length === 0) {
     return fallback;
   }
-  if (bin.every((entry) => entry.type === "exe" || entry.type === "cmd" || entry.type === "ps1")) {
+
+  const runners = bin.map((entry) => entry.runner ?? inferShimRunner(entry.target));
+  if (runners.every((runner, index) => runner === "direct" || runner === "cmd" || runner === "powershell" || (
+    runner === undefined && (bin[index]!.type === "exe" || bin[index]!.type === "cmd" || bin[index]!.type === "ps1")
+  ))) {
     return "standalone";
   }
-  if (bin.some((entry) => entry.type === "js" || entry.type === "ts")) {
+
+  if (runners.every((runner, index) => runner === "bun" || (
+    runner === undefined && (bin[index]!.type === "js" || bin[index]!.type === "ts")
+  ))) {
     return "bun-native";
   }
-  if (bin.some((entry) => entry.type === "jar" || entry.type === "py" || entry.type === "other")) {
+
+  if (bin.some((entry, index) => {
+    const runner = runners[index];
+    return runner === "python"
+      || runner === "java"
+      || runner === "bash"
+      || (runner === undefined && (entry.type === "jar" || entry.type === "py" || entry.type === "other"));
+  })) {
     return "runtime-dependent";
   }
   return fallback;

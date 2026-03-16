@@ -11,6 +11,7 @@ import type {
   ResolvedSource,
   RuntimeContext,
   ShimDef,
+  ShimRunner,
   SkillMeta,
   SourceRef,
   SourceResolver,
@@ -18,9 +19,9 @@ import type {
 } from "../core/types";
 import { copyPath, ensureDir, pathExists, removePath } from "../utils/fs";
 import { parseYaml, readRuntimeText } from "../utils/runtime";
-import { detectShimType } from "../utils/strings";
+import { deriveShimName, detectShimType, inferShimRunner } from "../utils/strings";
 import { findExactGitHubCatalog, searchGitHubCatalog } from "./catalog-helpers";
-import { finalizePreparedPackage } from "./helpers";
+import { finalizePreparedPackage, inferRuntimeFromBins } from "./helpers";
 
 const IDENTIFIER = /^skill:([^/]+)\/([^@#]+?)(?:@([^#]+))?(?:#(.+))?$/;
 
@@ -33,9 +34,17 @@ interface SkillGithubResolvedExtra {
 interface ParsedFrontmatter {
   name?: string;
   description?: string;
-  flget?: {
-    shims?: Array<{ name: string; target: string }>;
-  };
+  shims?: Array<string | {
+    name?: string;
+    target?: string;
+    runner?: string;
+  }>;
+}
+
+export interface DiscoveredSkill {
+  id: string;
+  relativePath: string;
+  displayName?: string;
 }
 
 async function findSkillMdRecursive(root: string, depth: number): Promise<string[]> {
@@ -55,6 +64,19 @@ async function findSkillMdRecursive(root: string, depth: number): Promise<string
     }
   }
   return matches;
+}
+
+function getSkillBaseDirs(repoRoot: string): string[] {
+  return [
+    repoRoot,
+    join(repoRoot, "skills"),
+    join(repoRoot, ".claude", "skills"),
+    join(repoRoot, ".codex", "skills"),
+  ];
+}
+
+function uniquePaths(paths: string[]): string[] {
+  return [...new Set(paths)];
 }
 
 function normalizeRelativePath(root: string, path: string): string {
@@ -91,12 +113,15 @@ async function hashDirectoryContents(root: string): Promise<string> {
 
 async function findSkillDirectory(repoRoot: string, subpath?: string): Promise<{ path: string; relativePath: string; warnings: string[] }> {
   if (subpath) {
-    const candidates = [
+    const candidateSet = new Set<string>([
       resolve(repoRoot, subpath),
       resolve(repoRoot, basename(subpath)),
-      resolve(repoRoot, basename(repoRoot), subpath),
-      resolve(repoRoot, basename(repoRoot), basename(subpath)),
-    ];
+    ]);
+    for (const baseDir of getSkillBaseDirs(repoRoot)) {
+      candidateSet.add(resolve(baseDir, subpath));
+      candidateSet.add(resolve(baseDir, basename(subpath)));
+    }
+    const candidates = [...candidateSet];
     for (const candidate of candidates) {
       if (await pathExists(join(candidate, "SKILL.md"))) {
         return { path: candidate, relativePath: normalizeRelativePath(repoRoot, candidate), warnings: [] };
@@ -108,13 +133,12 @@ async function findSkillDirectory(repoRoot: string, subpath?: string): Promise<{
   const warnings: string[] = [];
   const candidates: string[] = [];
 
-  for (const pattern of [
-    ["skills"],
-    [".claude", "skills"],
-    [".codex", "skills"],
-  ]) {
-    const base = join(repoRoot, ...pattern);
+  for (const base of getSkillBaseDirs(repoRoot)) {
     if (!await pathExists(base)) {
+      continue;
+    }
+    if (await pathExists(join(base, "SKILL.md"))) {
+      candidates.push(base);
       continue;
     }
     for (const entry of await readdir(base, { withFileTypes: true })) {
@@ -126,10 +150,6 @@ async function findSkillDirectory(repoRoot: string, subpath?: string): Promise<{
         candidates.push(candidate);
       }
     }
-  }
-
-  if (await pathExists(join(repoRoot, "SKILL.md"))) {
-    candidates.push(repoRoot);
   }
 
   const recursiveCandidates = await findSkillMdRecursive(repoRoot, 3);
@@ -154,6 +174,36 @@ async function findSkillDirectory(repoRoot: string, subpath?: string): Promise<{
   };
 }
 
+async function collectSkillDirectories(repoRoot: string): Promise<string[]> {
+  const candidates: string[] = [];
+
+  for (const base of getSkillBaseDirs(repoRoot)) {
+    if (!await pathExists(base)) {
+      continue;
+    }
+    if (await pathExists(join(base, "SKILL.md"))) {
+      candidates.push(base);
+      continue;
+    }
+    for (const entry of await readdir(base, { withFileTypes: true })) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const candidate = join(base, entry.name);
+      if (await pathExists(join(candidate, "SKILL.md"))) {
+        candidates.push(candidate);
+      }
+    }
+  }
+
+  const recursiveCandidates = await findSkillMdRecursive(repoRoot, 3);
+  for (const skillMdPath of recursiveCandidates) {
+    candidates.push(resolve(skillMdPath, ".."));
+  }
+
+  return uniquePaths(candidates);
+}
+
 async function parseFrontmatter(skillMdPath: string): Promise<ParsedFrontmatter> {
   const content = await readRuntimeText(skillMdPath);
   if (!content.startsWith("---\n")) {
@@ -167,18 +217,43 @@ async function parseFrontmatter(skillMdPath: string): Promise<ParsedFrontmatter>
   return parseYaml(yaml) as ParsedFrontmatter;
 }
 
-function validateSkillShims(shims?: Array<{ name: string; target: string }>): ShimDef[] {
+function isShimRunner(value: string | undefined): value is ShimRunner {
+  return value === "direct"
+    || value === "cmd"
+    || value === "powershell"
+    || value === "java"
+    || value === "python"
+    || value === "bun"
+    || value === "bash";
+}
+
+function validateSkillShims(shims?: ParsedFrontmatter["shims"]): ShimDef[] {
   if (!shims) {
     return [];
   }
   return shims.flatMap((entry) => {
-    if (!entry.name || !entry.target || !/^scripts\/.+\.(ts|js)$/i.test(entry.target)) {
+    const target = typeof entry === "string" ? entry : entry.target;
+    if (!target) {
       return [];
     }
+
+    const normalizedTarget = target.replace(/\\/g, "/");
+    if (!/^scripts\/.+$/i.test(normalizedTarget)) {
+      return [];
+    }
+
+    const runner = typeof entry === "string"
+      ? inferShimRunner(normalizedTarget)
+      : (isShimRunner(entry.runner) ? entry.runner : inferShimRunner(normalizedTarget));
+    if (!runner) {
+      return [];
+    }
+
     return [{
-      name: entry.name,
-      target: entry.target.replace(/\\/g, "/"),
-      type: detectShimType(entry.target),
+      name: typeof entry === "string" ? deriveShimName(normalizedTarget) : (entry.name ?? deriveShimName(normalizedTarget)),
+      target: normalizedTarget,
+      type: detectShimType(normalizedTarget),
+      runner,
     }];
   });
 }
@@ -198,6 +273,72 @@ function parseIdentifier(
     requestedRef: requestedRef || undefined,
     subpath: subpath || undefined,
   };
+}
+
+export function parseSkillRepoIdentifier(identifier: string): {
+  owner: string;
+  repo: string;
+  requestedRef?: string;
+  subpath?: string;
+} | null {
+  const parsed = parseIdentifier(identifier.startsWith("skill:") ? identifier : `skill:${identifier}`);
+  if (!parsed) {
+    return null;
+  }
+  return {
+    owner: parsed.owner,
+    repo: parsed.repo,
+    requestedRef: parsed.requestedRef,
+    subpath: parsed.subpath,
+  };
+}
+
+export async function discoverSkillsInRepo(
+  context: RuntimeContext,
+  identifier: string,
+): Promise<DiscoveredSkill[]> {
+  const parsed = parseSkillRepoIdentifier(identifier);
+  if (!parsed) {
+    throw new Error(`Invalid skill repository reference: ${identifier}`);
+  }
+
+  const { owner, repo, requestedRef, subpath } = parsed;
+  if (subpath) {
+    return [{
+      id: basename(subpath).toLowerCase(),
+      relativePath: subpath,
+    }];
+  }
+
+  const resolvedRef = requestedRef ?? (await getDefaultBranchHead(context, owner, repo)).sha;
+  const tempRepoDir = join(context.dirs.temp, `skill-discovery-${repo}-${Date.now()}`);
+
+  try {
+    const tarball = await downloadToStore(context, getTarballUrl(owner, repo, resolvedRef), {
+      filenameHint: `${repo}-${resolvedRef}.tar.gz`,
+      requestInit: {
+        headers: await getGitHubHeaders(context),
+      },
+    });
+
+    await ensureDir(tempRepoDir);
+    await extractInto(tarball.path, tempRepoDir);
+
+    const directories = await collectSkillDirectories(tempRepoDir);
+    const discovered: DiscoveredSkill[] = [];
+    for (const directory of directories) {
+      const frontmatter = await parseFrontmatter(join(directory, "SKILL.md"));
+      const relativePath = normalizeRelativePath(tempRepoDir, directory);
+      discovered.push({
+        id: basename(directory).toLowerCase(),
+        relativePath,
+        displayName: frontmatter.name,
+      });
+    }
+    return discovered;
+  } finally {
+    await removePath(tempRepoDir);
+  }
 }
 
 export const skillGithubSource: SourceResolver<"skill-github", SkillGithubResolvedExtra> = {
@@ -280,7 +421,7 @@ export const skillGithubSource: SourceResolver<"skill-github", SkillGithubResolv
     await removePath(tempRepoDir);
 
     const frontmatter = await parseFrontmatter(join(stagingDir, "SKILL.md"));
-    const shims = validateSkillShims(frontmatter.flget?.shims);
+    const shims = validateSkillShims(frontmatter.shims);
     const skill: SkillMeta = {
       folderPath: located.relativePath,
       folderHash: await hashDirectoryContents(stagingDir),
@@ -289,7 +430,7 @@ export const skillGithubSource: SourceResolver<"skill-github", SkillGithubResolv
     return finalizePreparedPackage(stagingDir, {
       displayName: frontmatter.name ?? resolved.displayName,
       portability: "portable",
-      runtime: shims.length > 0 ? "bun-native" : "unverified",
+      runtime: inferRuntimeFromBins(shims, "unverified"),
       bin: shims,
       persist: [],
       warnings: located.warnings,

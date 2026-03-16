@@ -1,5 +1,5 @@
 import { basename, extname } from "node:path";
-import type { ShimDef } from "../core/types";
+import type { ShimDef, ShimRunner } from "../core/types";
 
 export function slugify(value: string): string {
   return value
@@ -40,6 +40,35 @@ export function detectShimType(target: string): ShimDef["type"] {
       return "ts";
     default:
       return "other";
+  }
+}
+
+export function inferShimRunner(target: string): ShimRunner | undefined {
+  const extension = extname(target).toLowerCase();
+  switch (extension) {
+    case ".exe":
+    case ".com":
+      return "direct";
+    case ".cmd":
+    case ".bat":
+      return "cmd";
+    case ".ps1":
+      return "powershell";
+    case ".jar":
+      return "java";
+    case ".py":
+      return "python";
+    case ".js":
+    case ".cjs":
+    case ".mjs":
+    case ".ts":
+    case ".cts":
+    case ".mts":
+      return "bun";
+    case ".sh":
+      return "bash";
+    default:
+      return undefined;
   }
 }
 

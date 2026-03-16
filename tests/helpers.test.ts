@@ -15,7 +15,7 @@ import { createShims } from "../src/core/shim";
 import { inferPackageLocationFromRelativeParts } from "../src/core/source-family";
 import { decryptSecretValue, encryptSecretsEnv } from "../src/core/secrets";
 import { chooseBestBinCandidate, collectExecutableCandidates, finalizePreparedPackage, normalizeOverrideDaemonEntries } from "../src/sources/helpers";
-import { detectShimType, wildcardToRegExp } from "../src/utils/strings";
+import { detectShimType, inferShimRunner, wildcardToRegExp } from "../src/utils/strings";
 
 describe("wildcardToRegExp", () => {
   test("matches glob-like asset names", () => {
@@ -36,6 +36,14 @@ describe("detectShimType", () => {
     expect(detectShimType("bin/demo.ts")).toBe("ts");
     expect(detectShimType("bin/demo.cts")).toBe("ts");
     expect(detectShimType("bin/demo.mts")).toBe("ts");
+  });
+});
+
+describe("inferShimRunner", () => {
+  test("infers runners from common script extensions", () => {
+    expect(inferShimRunner("scripts/demo.ts")).toBe("bun");
+    expect(inferShimRunner("scripts/demo.py")).toBe("python");
+    expect(inferShimRunner("scripts/demo.sh")).toBe("bash");
   });
 });
 
@@ -324,6 +332,23 @@ describe("bun fallback shims", () => {
     expect(ps1).toContain('Join-Path $PSScriptRoot "..\\bun.exe"');
     expect(ps1).toContain('Join-Path $PSScriptRoot "..\\..\\bun.exe"');
     expect(ps1).toContain("Get-Command bun -ErrorAction SilentlyContinue");
+  });
+
+  test("runner-aware shims can dispatch through bash", async () => {
+    const root = await mkdtemp(join(tmpdir(), "flget-shims-"));
+
+    await createShims(root, "skill-github", "demo-skill", [{
+      name: "demo-shell",
+      target: "scripts/demo.sh",
+      type: detectShimType("scripts/demo.sh"),
+      runner: "bash",
+    }]);
+
+    const cmd = await readFile(join(root, "shims", "demo-shell.cmd"), "utf8");
+    expect(cmd).toContain('bash "%SHIMDIR%\\..\\agents\\skills\\demo-skill\\current\\scripts\\demo.sh" %*');
+
+    const ps1 = await readFile(join(root, "shims", "demo-shell.ps1"), "utf8");
+    expect(ps1).toContain("& bash $target @args");
   });
 });
 

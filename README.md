@@ -11,7 +11,7 @@
   - Rename-based install/update/persist migration
 - Focused on standalone and Bun-friendly ecosystems
   - App sources: `scoop`, `npm`, `ghr`, `npmgh`
-- Agent skills: `flget skills ...` with shims for declared built-in `.ts` entry scripts
+- Agent skills: `flget skills ...` with shims for declared entry scripts
 
 ### ⚠️ Notes
 
@@ -42,7 +42,7 @@ flget install 7zip --source scoop      # source-scoped install
 flget install ripgrep --source ghr     # source-scoped GitHub Releases query
 flget install typescript --source npm  # source-scoped npm registry query
 flget install pnpm --source npmgh      # source-scoped GitHub source repo query
-flget skills install flatina/cowsay-ts # install an agent skill repo and create shims for declared built-in .ts entry scripts
+flget skills install flatina/skills --skill cowsay-ts # install one skill from a skill repo and create shims
 ```
 - Use a fully-qualified ref such as `ghr:<owner>/<repo>` when you need an exact non-interactive install
 - Update flget itself with `flget update` or `.\update.ps1`
@@ -170,7 +170,9 @@ flget registry <list|add|remove|update> ...
 # agent skills
 flget skills <find|install|list|info|update|remove> ...
 flget skills <search|add|ls|upgrade|rm> ...            # aliases
-flget skills install flatina/cowsay-ts                 # installs an agent skill repo and creates shims for declared built-in .ts entry scripts
+flget skills install flatina/skills --skill cowsay-ts
+flget skills install flatina/skills --all
+flget skills install flatina/skills --list
 
 # source-scoped install query
 flget install cowsay --source scoop
@@ -195,6 +197,32 @@ flget fund
 flget fund pnpm
 flget fund --json
 flget skills find cowsay-ts
+```
+
+## 🤖 Skill Script Shim Generation
+
+- Declare skill shims with top-level `shims` in `SKILL.md` frontmatter
+
+```yaml
+---
+name: cowsay
+description: ASCII cowsay via TypeScript
+shims:
+  - scripts/cowsay.ts
+---
+```
+
+- Optional shim fields: name, runner
+
+```yaml
+---
+name: cowsay
+description: ASCII cowsay via TypeScript
+shims:
+  - target: scripts/cowsay.ts
+    name: my-cowsay
+    runner: bun
+---
 ```
 
 ## 🛠️ Troubleshooting
