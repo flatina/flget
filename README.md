@@ -158,7 +158,7 @@ flget remove <package>
 flget list [--json]
 flget fund [<package>] [--json]
 flget info <package>
-flget search <query>
+flget search <query> [--source <source>]
 flget env
 flget repair [package]
 flget root <add|remove|list|first|last> ...
@@ -185,6 +185,7 @@ flget install npmgh:piuccio/cowsay
 
 # source-scoped search query
 flget search cowsay
+flget search cowsay --source scoop
 flget search npm:cowsay
 flget search ghr:cowsay
 flget search npmgh:cowsay
