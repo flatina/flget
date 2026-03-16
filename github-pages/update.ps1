@@ -3,7 +3,8 @@
 param(
   [string]$BaseUrl = "https://flatina.github.io/flget",
   [string]$RootPath,
-  [switch]$ApplyDownloadedUpdate
+  [switch]$ApplyDownloadedUpdate,
+  [string]$ReleaseTag
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,6 +36,95 @@ function Get-BunUrl {
     return $env:FLGET_BUN_DOWNLOAD_URL
   }
   return "https://github.com/oven-sh/bun/releases/latest/download/$(Get-BunAssetName)"
+}
+
+function Get-ReleaseApiBaseUrl {
+  if ($env:FLGET_RELEASE_API_BASE_URL) {
+    return $env:FLGET_RELEASE_API_BASE_URL.TrimEnd("/")
+  }
+  return "https://api.github.com"
+}
+
+function Get-ReleaseOwner {
+  if ($env:FLGET_RELEASE_OWNER) {
+    return $env:FLGET_RELEASE_OWNER
+  }
+  return "flatina"
+}
+
+function Get-ReleaseRepo {
+  if ($env:FLGET_RELEASE_REPO) {
+    return $env:FLGET_RELEASE_REPO
+  }
+  return "flget"
+}
+
+function Get-ReleaseHeaders {
+  $headers = @{
+    "Accept" = "application/vnd.github+json"
+    "User-Agent" = "flget-update-script"
+  }
+
+  $token = if ($env:FLGET_GITHUB_TOKEN) {
+    $env:FLGET_GITHUB_TOKEN
+  } elseif ($env:GITHUB_TOKEN) {
+    $env:GITHUB_TOKEN
+  } else {
+    $null
+  }
+
+  if ($token) {
+    $headers["Authorization"] = "Bearer $token"
+  }
+
+  return $headers
+}
+
+function Get-ReleaseMetadata {
+  param([string]$Tag)
+
+  $apiBase = Get-ReleaseApiBaseUrl
+  $owner = Get-ReleaseOwner
+  $repo = Get-ReleaseRepo
+  $releasePath = if ($Tag) {
+    "/repos/$owner/$repo/releases/tags/$([System.Uri]::EscapeDataString($Tag))"
+  } else {
+    "/repos/$owner/$repo/releases/latest"
+  }
+
+  return Invoke-RestMethod -Uri "$apiBase$releasePath" -Headers (Get-ReleaseHeaders)
+}
+
+function Get-ReleaseAssetUrl {
+  param(
+    [object]$Release,
+    [string]$Name
+  )
+
+  if (-not $Release -or -not $Release.assets) {
+    return $null
+  }
+
+  $asset = $Release.assets | Where-Object { $_.name -eq $Name } | Select-Object -First 1
+  if (-not $asset) {
+    return $null
+  }
+
+  return [string]$asset.browser_download_url
+}
+
+function Get-RequiredReleaseAssetUrl {
+  param(
+    [object]$Release,
+    [string]$Name
+  )
+
+  $assetUrl = Get-ReleaseAssetUrl -Release $Release -Name $Name
+  if (-not $assetUrl) {
+    $releaseLabel = if ($Release -and $Release.tag_name) { $Release.tag_name } else { "requested release" }
+    throw "Required release asset not found in $releaseLabel: $Name"
+  }
+  return $assetUrl
 }
 
 function Download-File {
@@ -135,7 +225,7 @@ if (-not $ApplyDownloadedUpdate) {
   Write-Step "Downloading latest update script"
   Download-File -Url "$normalizedBaseUrl/update.ps1" -OutFile $latestScript
 
-  & $latestScript -RootPath $resolvedRoot -BaseUrl $normalizedBaseUrl -ApplyDownloadedUpdate
+  & $latestScript -RootPath $resolvedRoot -BaseUrl $normalizedBaseUrl -ApplyDownloadedUpdate -ReleaseTag $ReleaseTag
   exit $LASTEXITCODE
 }
 
@@ -157,19 +247,22 @@ $rootFiles = @(
   "update.ps1"
 )
 
-$assets = @(
-  @{ Name = "flget.js"; Url = "$normalizedBaseUrl/dist/flget.js" },
-  @{ Name = "flget.js.map"; Url = "$normalizedBaseUrl/dist/flget.js.map" },
-  @{ Name = "activate.ps1"; Url = "$normalizedBaseUrl/activate.ps1" },
-  @{ Name = "REGISTER_PATH.ps1"; Url = "$normalizedBaseUrl/REGISTER_PATH.ps1" },
-  @{ Name = "update.ps1"; Url = "$normalizedBaseUrl/update.ps1" }
-)
-
 $movedOld = New-Object System.Collections.Generic.List[string]
 $movedNew = New-Object System.Collections.Generic.List[string]
 
 try {
   Write-Step "Preparing staged root update under $sessionDir"
+  $release = Get-ReleaseMetadata -Tag $ReleaseTag
+  $releaseLabel = if ($release.tag_name) { $release.tag_name } else { "latest release" }
+  Write-Step "Using runtime assets from $releaseLabel"
+
+  $assets = @(
+    @{ Name = "flget.js"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "flget.js") },
+    @{ Name = "flget.js.map"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "flget.js.map") },
+    @{ Name = "activate.ps1"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "activate.ps1") },
+    @{ Name = "REGISTER_PATH.ps1"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "REGISTER_PATH.ps1") },
+    @{ Name = "update.ps1"; Url = "$normalizedBaseUrl/update.ps1" }
+  )
 
   foreach ($asset in $assets) {
     Download-File -Url $asset.Url -OutFile (Join-Path $newDir $asset.Name)
