@@ -3,142 +3,607 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="flget is a Windows-first, portable-first package manager with directory-isolated installs, rename-based updates, and support for scoop, npm, GitHub Releases, npmgh, and agent skills."
+  >
   <title>flget by flatina</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #efe7db;
-      --panel: rgba(255, 252, 246, 0.86);
-      --fg: #201a14;
-      --muted: #63584c;
-      --line: rgba(84, 69, 56, 0.16);
+      --bg: #f4efe7;
+      --bg-deep: #e8ddd0;
+      --panel: rgba(255, 250, 244, 0.88);
+      --panel-strong: #fffaf4;
+      --ink: #1f1a17;
+      --muted: #655b50;
+      --line: rgba(77, 63, 50, 0.14);
       --accent: #0f766e;
-      --accent-2: #164e63;
-      --shadow: 0 24px 60px rgba(38, 28, 16, 0.12);
+      --accent-strong: #0d5d56;
+      --accent-soft: rgba(15, 118, 110, 0.1);
+      --accent-2: #8f3f2d;
+      --shadow: 0 24px 60px rgba(40, 26, 14, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 18px;
+      --content: 1140px;
     }
 
     * {
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      color: var(--fg);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      color: var(--ink);
       background:
-        radial-gradient(circle at top left, rgba(22, 78, 99, 0.12), transparent 34%),
-        radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 28%),
-        linear-gradient(180deg, #f6f0e6 0%, var(--bg) 100%);
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(143, 63, 45, 0.12), transparent 30%),
+        linear-gradient(180deg, #fbf6ee 0%, var(--bg) 58%, var(--bg-deep) 100%);
     }
 
-    main {
-      max-width: 880px;
-      margin: 0 auto;
-      padding: 56px 20px 72px;
-    }
-
-    .panel {
-      padding: 32px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-    }
-
-    .eyebrow {
-      margin: 0 0 10px;
-      font: 600 0.82rem/1.2 "Segoe UI", sans-serif;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--accent-2);
-    }
-
-    h1 {
-      margin: 0 0 14px;
-      font-size: clamp(2.4rem, 7vw, 4.5rem);
-      line-height: 0.96;
-      letter-spacing: -0.04em;
-    }
-
-    p {
-      margin: 0 0 16px;
-      font-size: 1.05rem;
-      line-height: 1.65;
-      color: var(--muted);
-    }
-
-    .command {
-      margin: 26px 0 16px;
-      padding: 18px 20px;
-      overflow-x: auto;
-      border-radius: 18px;
-      border: 1px solid rgba(15, 118, 110, 0.18);
-      background: #fffdf9;
-      font: 500 0.98rem/1.6 Consolas, "Courier New", monospace;
-      color: var(--fg);
-    }
-
-    code {
-      font-family: Consolas, "Courier New", monospace;
-    }
-
-    .links {
-      display: flex;
-      gap: 18px;
-      flex-wrap: wrap;
-      margin-top: 22px;
-      font: 600 0.96rem/1.3 "Segoe UI", sans-serif;
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+      background-size: 100% 36px, 36px 100%;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 78%);
     }
 
     a {
-      color: var(--accent);
+      color: inherit;
       text-decoration: none;
     }
 
-    a:hover {
-      text-decoration: underline;
+    main {
+      width: min(calc(100% - 32px), var(--content));
+      margin: 0 auto;
+      padding: 28px 0 80px;
     }
 
-    .note {
-      margin-top: 24px;
-      padding-top: 18px;
-      border-top: 1px solid var(--line);
-      font-size: 0.98rem;
+    .reveal {
+      animation: rise-in 620ms ease both;
+    }
+
+    .delay-1 {
+      animation-delay: 80ms;
+    }
+
+    .delay-2 {
+      animation-delay: 160ms;
+    }
+
+    .delay-3 {
+      animation-delay: 240ms;
+    }
+
+    .panel,
+    .card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      padding: 34px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -60px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(15, 118, 110, 0.28), transparent 62%),
+        radial-gradient(circle at 70% 70%, rgba(143, 63, 45, 0.18), transparent 64%);
+      filter: blur(4px);
+    }
+
+    .eyebrow,
+    .kicker {
+      margin: 0 0 10px;
+      font: 700 0.78rem/1.2 "Bahnschrift", "Aptos", sans-serif;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-strong);
+    }
+
+    .hero-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.8fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      max-width: 9ch;
+      font-size: clamp(3.2rem, 9vw, 6.2rem);
+      line-height: 0.92;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      line-height: 1;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .lede {
+      margin-top: 18px;
+      max-width: 62ch;
+      font-size: 1.12rem;
+    }
+
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 118, 110, 0.16);
+      background: rgba(255, 255, 255, 0.56);
+      font: 700 0.86rem/1 "Bahnschrift", "Aptos", sans-serif;
+      letter-spacing: 0.02em;
+      color: var(--ink);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font: 700 0.95rem/1 "Bahnschrift", "Aptos", sans-serif;
+      letter-spacing: 0.02em;
+      transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button.primary {
+      background: var(--accent);
+      color: #f7fffd;
+      box-shadow: 0 16px 28px rgba(15, 118, 110, 0.2);
+    }
+
+    .button.secondary {
+      border-color: rgba(15, 118, 110, 0.16);
+      background: rgba(255, 255, 255, 0.64);
+      color: var(--ink);
+    }
+
+    .hero-aside {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .fact-card {
+      padding: 18px 18px 16px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(77, 63, 50, 0.12);
+    }
+
+    .fact-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font: 700 1rem/1.25 "Bahnschrift", "Aptos", sans-serif;
+      color: var(--ink);
+    }
+
+    .sections {
+      display: grid;
+      gap: 22px;
+      margin-top: 22px;
+    }
+
+    .two-up {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 22px;
+    }
+
+    .card {
+      border-radius: var(--radius-xl);
+      padding: 28px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    pre {
+      margin: 0;
+      overflow-x: auto;
+      padding: 18px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(15, 118, 110, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(251, 247, 242, 0.94));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+      font: 500 0.96rem/1.7 Consolas, "Cascadia Code", "Courier New", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+    }
+
+    .source-grid,
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .source-card,
+    .asset-link {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .source-card strong,
+    .asset-link strong {
+      display: block;
+      margin-bottom: 6px;
+      font: 700 1rem/1.25 "Bahnschrift", "Aptos", sans-serif;
+      color: var(--ink);
+    }
+
+    .source-card p,
+    .asset-link p {
+      font-size: 0.95rem;
+    }
+
+    .asset-link {
+      transition: transform 180ms ease, background-color 180ms ease;
+    }
+
+    .asset-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .inline-note {
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(143, 63, 45, 0.14);
+      background: rgba(143, 63, 45, 0.06);
+    }
+
+    .footer-note {
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+
+    @keyframes rise-in {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 920px) {
+      .hero-grid,
+      .two-up,
+      .source-grid,
+      .asset-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 640px) {
       main {
-        padding: 24px 14px 44px;
+        width: min(calc(100% - 18px), var(--content));
+        padding: 12px 0 42px;
       }
 
-      .panel {
+      .hero,
+      .card {
         padding: 22px 18px;
-        border-radius: 18px;
       }
 
-      .command {
-        padding: 14px 16px;
+      .actions,
+      .chip-row {
+        gap: 10px;
+      }
+
+      .button {
+        width: 100%;
+      }
+
+      pre {
+        padding: 16px;
+        font-size: 0.9rem;
       }
     }
   </style>
 </head>
 <body>
   <main>
-    <section class="panel">
-      <p class="eyebrow">Windows-first package manager</p>
-      <h1>flget</h1>
-      <p>Directory-isolated installs. Rename-based updates. Portable by default.</p>
-      <p>Run the update script from the directory where you want to create or refresh the flget root.</p>
-      <div class="command"><code>cd C:\tools\flget
-powershell -c "irm https://flatina.github.io/flget/update.ps1 -OutFile .\update.ps1"
-.\update.ps1</code></div>
-      <div class="links">
-        <a href="update.ps1">update.ps1</a>
-        <a href="https://github.com/flatina/flget">GitHub</a>
+    <section class="hero panel reveal">
+      <p class="eyebrow">Portable-first package manager</p>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="stack">
+            <h1>flget</h1>
+            <p class="lede">
+              Windows-first, directory-isolated installs with rename-based updates, local roots,
+              and Bun-friendly workflows.
+            </p>
+            <p>
+              Use <code>scoop</code>, <code>npm</code>, <code>ghr</code>, and <code>npmgh</code>
+              sources from the same root, then install agent skills with
+              <code>flget skills ...</code>.
+            </p>
+          </div>
+          <div class="chip-row" aria-label="Key properties">
+            <span class="chip">No junctions</span>
+            <span class="chip">No symlinks</span>
+            <span class="chip">No registry writes</span>
+            <span class="chip">No core PATH mutation</span>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="update.ps1">Get update.ps1</a>
+            <a class="button secondary" href="https://github.com/flatina/flget">GitHub</a>
+            <a class="button secondary" href="activate.ps1">activate.ps1</a>
+          </div>
+        </div>
+        <aside class="hero-aside" aria-label="Highlights">
+          <div class="fact-card">
+            <strong>Portable roots</strong>
+            <p>Built for portable drives, optical media, and multiple isolated roots.</p>
+          </div>
+          <div class="fact-card">
+            <strong>Predictable updates</strong>
+            <p>Install, update, and persist migration stay rename-based. <code>current/</code> stays a real directory.</p>
+          </div>
+          <div class="fact-card">
+            <strong>Runtime resolution</strong>
+            <p><code>&lt;root&gt;/bun.exe</code>, then parent <code>bun.exe</code>, then system <code>bun</code>.</p>
+          </div>
+        </aside>
       </div>
-      <p class="note">The update script downloads <code>flget.js</code>, <code>flget.js.map</code>, <code>bun.exe</code>, <code>activate.ps1</code>, <code>update.ps1</code>, and <code>REGISTER_PATH.ps1</code>. The first <code>activate</code> run bootstraps <code>flget.root.toml</code> and creates <code>shims/flget.*</code> and <code>shims/bun.*</code>.</p>
     </section>
+
+    <div class="sections">
+      <section class="two-up">
+        <article class="card reveal delay-1">
+          <div class="stack">
+            <div class="stack">
+              <p class="kicker">Install / Update</p>
+              <h2>Bootstrap or refresh a root</h2>
+              <p>
+                Run the stable update script from the directory where you want the flget root to live.
+              </p>
+            </div>
+            <pre><code>cd C:\tools\flget
+powershell -c "irm https://flatina.github.io/flget/update.ps1 -OutFile .\update.ps1;.\update.ps1"</code></pre>
+            <p class="subtle">
+              Self-update later with <code>flget update</code> or <code>.\update.ps1</code>. Run
+              <code>.\REGISTER_PATH.ps1</code> only if you explicitly want PATH registration.
+            </p>
+          </div>
+        </article>
+
+        <article class="card reveal delay-2">
+          <div class="stack">
+            <div class="stack">
+              <p class="kicker">Quick Start</p>
+              <h2>Use the root immediately</h2>
+            </div>
+            <pre><code>.\activate.ps1
+flget --version
+
+flget install 7zip --source scoop
+flget install ripgrep --source ghr
+flget install typescript --source npm
+flget install pnpm --source npmgh
+flget skills install openai/codex</code></pre>
+            <p class="subtle">
+              Use a fully-qualified ref such as <code>ghr:owner/repo</code> when you need an exact
+              non-interactive install.
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <section class="card reveal delay-2">
+        <div class="stack">
+          <div class="stack">
+            <p class="kicker">Sources</p>
+            <h2>Standalone packages and agent skills</h2>
+            <p>
+              flget is not a drop-in replacement for scoop or npm. It focuses on portable,
+              directory-isolated roots and source-scoped installs.
+            </p>
+          </div>
+          <div class="source-grid">
+            <div class="source-card">
+              <strong>scoop</strong>
+              <p>Install Windows apps from Scoop manifests while keeping the flget root isolated.</p>
+            </div>
+            <div class="source-card">
+              <strong>npm</strong>
+              <p>Install npm registry packages into the root without using global <code>-g</code>.</p>
+            </div>
+            <div class="source-card">
+              <strong>ghr</strong>
+              <p>Resolve and install packages directly from GitHub Releases.</p>
+            </div>
+            <div class="source-card">
+              <strong>npmgh</strong>
+              <p>Install npm-style packages from GitHub source repositories.</p>
+            </div>
+            <div class="source-card">
+              <strong>skills</strong>
+              <p>Store skill installs under <code>agents/skills/</code> and expose declared shims.</p>
+            </div>
+            <div class="source-card">
+              <strong>env refresh</strong>
+              <p><code>flget env</code> refreshes env cache files and ensures static root scripts exist.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="two-up">
+        <article class="card reveal delay-3">
+          <div class="stack">
+            <div class="stack">
+              <p class="kicker">Offline Roots</p>
+              <h2>Reuse an existing root as a source</h2>
+              <p>
+                In air-gapped environments, copying the entire root directory is usually enough.
+                If you only need a fresh shell plus local package reuse, copy the root files and
+                add an existing root as a source.
+              </p>
+            </div>
+            <pre><code>mkdir C:\offline-flget
+copy K:\flget\*.* C:\offline-flget   # root files only, not recursive
+
+cd C:\offline-flget
+flget root add K:\flget
+flget install 7zip --source scoop</code></pre>
+          </div>
+        </article>
+
+        <article class="card reveal delay-3">
+          <div class="stack">
+            <div class="stack">
+              <p class="kicker">Secrets</p>
+              <h2>Plain .env or encrypted .flenc</h2>
+              <p>
+                Secret lookup uses process env first, then root and shared secret files. Encrypted
+                <code>.flenc</code> files require <code>FLGET_SECRETS_KEY</code>.
+              </p>
+            </div>
+            <div class="inline-note">
+              <p>
+                Lookup order: <code>process env</code> -> <code>.env</code> ->
+                <code>.secrets/.env</code> -> <code>.secrets/&lt;profile&gt;.env</code> ->
+                encrypted <code>.flenc</code> variants.
+              </p>
+            </div>
+            <p class="subtle">
+              If you need stronger sharing, rotation, or auditability, inject secrets from an
+              external tool before running flget.
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <section class="card reveal delay-3">
+        <div class="stack">
+          <div class="stack">
+            <p class="kicker">Assets</p>
+            <h2>Published root files</h2>
+            <p>
+              The update flow publishes the static PowerShell entrypoints plus the runtime bundle
+              used to create or refresh a flget root.
+            </p>
+          </div>
+          <div class="asset-grid">
+            <a class="asset-link" href="update.ps1">
+              <strong>update.ps1</strong>
+              <p>Stable manual install and update entrypoint.</p>
+            </a>
+            <a class="asset-link" href="activate.ps1">
+              <strong>activate.ps1</strong>
+              <p>Session-level environment entrypoint that recreates missing shims.</p>
+            </a>
+            <a class="asset-link" href="REGISTER_PATH.ps1">
+              <strong>REGISTER_PATH.ps1</strong>
+              <p>Optional PATH registration script. Not required for core flows.</p>
+            </a>
+            <a class="asset-link" href="bootstrap.ps1">
+              <strong>bootstrap.ps1</strong>
+              <p>Compatibility wrapper that delegates to <code>update.ps1</code>.</p>
+            </a>
+            <a class="asset-link" href="dist/flget.js">
+              <strong>dist/flget.js</strong>
+              <p>Published CLI bundle used by the root update flow.</p>
+            </a>
+            <a class="asset-link" href="https://github.com/flatina/flget#readme">
+              <strong>README</strong>
+              <p>Full command reference, root layout, and troubleshooting notes.</p>
+            </a>
+          </div>
+          <p class="footer-note subtle">
+            The first <code>activate</code> run bootstraps <code>flget.root.toml</code> and creates
+            <code>shims/flget.*</code> and <code>shims/bun.*</code> when needed.
+          </p>
+        </div>
+      </section>
+    </div>
   </main>
 </body>
 </html>
