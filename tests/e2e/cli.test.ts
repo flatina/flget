@@ -103,10 +103,13 @@ describe("flget CLI surface", () => {
     const activatePs1 = await Bun.file(join(root, "activate.ps1")).text();
     expect(activatePs1).toContain('Join-Path $PSScriptRoot "bun.exe"');
     expect(activatePs1).toContain('Get-Command bun -ErrorAction SilentlyContinue');
+    expect(activatePs1).toContain("Test-BucketBootstrapNeeded");
+    expect(activatePs1).toContain('Join-Path $PSScriptRoot "buckets"');
     expect(activatePs1).toContain('shims\\bun.cmd');
 
     const updatePs1 = await Bun.file(join(root, "update.ps1")).text();
     expect(updatePs1).toContain('Downloading latest update script');
+    expect(updatePs1).toContain("Invoke-BucketBootstrapIfNeeded");
     expect(updatePs1).toContain('flget updated at');
 
     const registerPs1 = await Bun.file(join(root, "REGISTER_PATH.ps1")).text();

@@ -17,6 +17,26 @@ function Resolve-FlgetBun {
   return $null
 }
 
+function Test-BucketBootstrapNeeded {
+  $configPath = Join-Path $PSScriptRoot "flget.root.toml"
+  if (-not (Test-Path -LiteralPath $configPath)) {
+    return $true
+  }
+
+  $hasConfiguredBuckets = Select-String -LiteralPath $configPath -Pattern '^\s*\[\[buckets\]\]\s*$' -Quiet
+  if (-not $hasConfiguredBuckets) {
+    return $false
+  }
+
+  $bucketRoot = Join-Path $PSScriptRoot "buckets"
+  if (-not (Test-Path -LiteralPath $bucketRoot)) {
+    return $true
+  }
+
+  $bucketDir = Get-ChildItem -LiteralPath $bucketRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+  return $null -eq $bucketDir
+}
+
 $env:FL_ROOT = $PSScriptRoot
 $resolvedBun = Resolve-FlgetBun
 
@@ -111,7 +131,7 @@ exit $LASTEXITCODE
 '@
 }
 
-if ((-not (Test-Path "$PSScriptRoot\flget.root.toml")) -and (Test-Path "$PSScriptRoot\flget.js")) {
+if ((Test-Path "$PSScriptRoot\flget.js") -and (Test-BucketBootstrapNeeded)) {
   & $resolvedBun "$PSScriptRoot\flget.js" env | Out-Null
   try {
     & $resolvedBun "$PSScriptRoot\flget.js" bucket update | Out-Null
