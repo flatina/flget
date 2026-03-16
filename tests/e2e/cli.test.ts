@@ -9,7 +9,8 @@ import {
   createMockNpmRegistryServer,
   createNpmTarball,
   createWorkspaceManager,
-  fixtureRoot,
+  repoRoot,
+  testsRoot,
   runCli,
   runGit,
   runProcess,
@@ -17,6 +18,8 @@ import {
 } from "./helpers";
 
 const { makeWorkspace, cleanupWorkspaces } = createWorkspaceManager();
+const packageManifest = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8")) as { version: string };
+const expectedVersionOutput = `flget ${packageManifest.version}`;
 
 afterEach(async () => {
   await cleanupWorkspaces();
@@ -24,19 +27,19 @@ afterEach(async () => {
 
 describe("flget CLI surface", () => {
   test("--version prints version", async () => {
-    const result = await runProcess([process.execPath, cliPath, "--version"], fixtureRoot);
+    const result = await runProcess([process.execPath, cliPath, "--version"], testsRoot);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe("flget 0.1.1");
+    expect(result.stdout.trim()).toBe(expectedVersionOutput);
   });
 
   test("-v prints version", async () => {
-    const result = await runProcess([process.execPath, cliPath, "-v"], fixtureRoot);
+    const result = await runProcess([process.execPath, cliPath, "-v"], testsRoot);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe("flget 0.1.1");
+    expect(result.stdout.trim()).toBe(expectedVersionOutput);
   });
 
   test("--help prints expanded help", async () => {
-    const result = await runProcess([process.execPath, cliPath, "--help"], fixtureRoot);
+    const result = await runProcess([process.execPath, cliPath, "--help"], testsRoot);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Usage:");
     expect(result.stdout).toContain("Aliases:");
@@ -46,11 +49,11 @@ describe("flget CLI surface", () => {
   });
 
   test("invalid install flags are rejected before dispatch", async () => {
-    const invalidArch = await runProcess([process.execPath, cliPath, "install", "npm:demo", "--arch", "weird"], fixtureRoot);
+    const invalidArch = await runProcess([process.execPath, cliPath, "install", "npm:demo", "--arch", "weird"], testsRoot);
     expect(invalidArch.exitCode).toBe(1);
     expect(invalidArch.stderr).toContain("Invalid --arch: weird");
 
-    const invalidSource = await runProcess([process.execPath, cliPath, "install", "demo", "--source", "nope"], fixtureRoot);
+    const invalidSource = await runProcess([process.execPath, cliPath, "install", "demo", "--source", "nope"], testsRoot);
     expect(invalidSource.exitCode).toBe(1);
     expect(invalidSource.stderr).toContain("Invalid --source: nope");
   });

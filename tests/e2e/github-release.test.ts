@@ -7,7 +7,7 @@ import {
   cliPath,
   createMockGitHubServer,
   createWorkspaceManager,
-  fixtureRoot,
+  testsRoot,
   runCli,
   runProcess,
   type MockGitHubState,

@@ -7,7 +7,7 @@ import {
   createMockGitHubServer,
   createNpmTarball,
   createWorkspaceManager,
-  fixtureRoot,
+  testsRoot,
   runCli,
   type MockGitHubState,
 } from "./helpers";

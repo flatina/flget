@@ -16,7 +16,7 @@ import { runUpdateCommand } from "./commands/update";
 import type { Arch, InstallOptions, InstallSource, RuntimeContext } from "./core/types";
 import { getBooleanFlag, getStringFlag, parseCliArgs, type ParsedCliArgs } from "./utils/cli";
 
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 
 function printHelp(): void {
   console.log(`flget v${VERSION}

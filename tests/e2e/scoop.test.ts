@@ -7,7 +7,7 @@ import {
   commitBucketManifest,
   createWorkspaceManager,
   createDemoManifest,
-  fixtureRoot,
+  testsRoot,
   runCli,
   runGit,
   runProcess,
