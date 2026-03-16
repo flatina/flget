@@ -46,7 +46,7 @@ flget skills install flatina/skills --skill cowsay-ts # install one skill from a
 ```
 - Use a fully-qualified ref such as `ghr:<owner>/<repo>` when you need an exact non-interactive install
 - Update flget itself with `flget update` or `.\update.ps1`
-- `update.ps1` is a stable Pages entrypoint; runtime assets are fetched from the latest GitHub release
+- `update.ps1` is a stable Pages entrypoint; runtime assets are fetched from the latest GitHub release zip
 - Run `.\REGISTER_PATH.ps1` only if you want to add `flget` to PATH (not recommended)
 
 ## 📁 Directory Root Source
