@@ -58,8 +58,8 @@ function Get-ReleaseArchiveName {
   param([string]$Arch)
 
   switch ($Arch) {
-    "x64" { return "flget-windows-x64.zip" }
-    "aarch64" { return "flget-windows-aarch64.zip" }
+    "x64" { return "flget-win-x64.zip" }
+    "aarch64" { return "flget-win-arm64.zip" }
     default { throw "Unsupported archive architecture: $Arch" }
   }
 }
