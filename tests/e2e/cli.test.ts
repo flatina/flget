@@ -110,7 +110,7 @@ describe("flget CLI surface", () => {
     const updatePs1 = await Bun.file(join(root, "update.ps1")).text();
     expect(updatePs1).toContain('Downloading latest update script');
     expect(updatePs1).toContain('releases/latest');
-    expect(updatePs1).toContain('flget-windows-x64.zip');
+    expect(updatePs1).toContain('flget-win-x64.zip');
     expect(updatePs1).toContain("Invoke-BucketBootstrapIfNeeded");
     expect(updatePs1).toContain('flget updated at');
 

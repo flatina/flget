@@ -25,8 +25,8 @@ function Ensure-Directory {
 function Get-BunAssetName {
   $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
   switch ($arch.ToString()) {
-    "Arm64" { return "flget-windows-aarch64.zip" }
-    "X64" { return "flget-windows-x64.zip" }
+    "Arm64" { return "flget-win-arm64.zip" }
+    "X64" { return "flget-win-x64.zip" }
     default { throw "Unsupported Windows architecture: $arch" }
   }
 }
