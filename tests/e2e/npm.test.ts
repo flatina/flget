@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   bootstrapRoot,
@@ -7,6 +7,7 @@ import {
   createNpmTarball,
   createWorkspaceManager,
   runCli,
+  runProcess,
   type MockNpmRegistryState,
 } from "./helpers";
 
@@ -140,6 +141,68 @@ describe("npm e2e", () => {
       expect(fund.stdout).toContain("mock-npm-cli");
       expect(fund.stdout).toContain("https://github.com/sponsors/mocknpm");
       expect(fund.stdout).toContain("Support mock npm");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("npm overrides can inject portable env vars for scoped packages", async () => {
+    const workspace = await makeWorkspace();
+    const root = join(workspace.dir, "root");
+    const state: MockNpmRegistryState = {
+      packages: {
+        "@openai/codex": {
+          latest: "1.0.0",
+          versions: {
+            "1.0.0": await createNpmTarball("1.0.0", "codex-mock", {
+              packageJson: {
+                name: "@openai/codex",
+                bin: {
+                  codex: "bin/mock-npm.js",
+                },
+              },
+            }),
+          },
+        },
+      },
+    };
+    const server = createMockNpmRegistryServer(state);
+    const env = {
+      FLGET_NPM_REGISTRY_BASE_URL: `http://127.0.0.1:${server.port}`,
+    };
+
+    try {
+      await bootstrapRoot(root, env);
+      await mkdir(join(root, "tmp", "registries", "local", "overrides", "npm"), { recursive: true });
+      await Bun.write(
+        join(root, "tmp", "registries", "local", "overrides", "npm", "openai--codex.toml"),
+        [
+          "[env]",
+          "CODEX_HOME = '${FL_ROOT}\\.codex'",
+          "",
+        ].join("\n"),
+      );
+
+      const install = await runCli(["install", "npm:@openai/codex"], root, env);
+      expect(install.stdout).toContain("Installed codex@1.0.0");
+
+      const info = JSON.parse((await runCli(["info", "codex"], root, env)).stdout) as {
+        envSet?: Record<string, string>;
+      };
+      expect(info.envSet).toEqual({
+        CODEX_HOME: "${FL_ROOT}\\.codex",
+      });
+
+      const envCache = await readFile(join(root, "tmp", "cache-env-sets.txt"), "utf8");
+      expect(envCache).toContain(`CODEX_HOME=${root}\\.codex`);
+
+      const activated = await runProcess(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ". .\\activate.ps1; Write-Output $env:CODEX_HOME"],
+        root,
+        env,
+      );
+      expect(activated.exitCode).toBe(0);
+      expect(activated.stdout).toContain(`${root}\\.codex`);
     } finally {
       server.stop(true);
     }

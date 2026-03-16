@@ -29,6 +29,7 @@ import {
   inferRuntimeFromBins,
   normalizeOverrideBins,
   normalizeOverrideDaemonEntries,
+  normalizeOverrideEnvSet,
   normalizeOverrideInteractiveEntries,
   normalizeOverrideNotes,
   normalizeOverridePersist,
@@ -206,9 +207,9 @@ export const githubReleaseSource: SourceResolver<"github-release", GitHubRelease
 
     const overrideBin = normalizeOverrideBins(override?.bin);
     const effectiveBin = overrideBin.length > 0 ? overrideBin : chooseBestBinCandidate(repo, await collectExecutableCandidates(stagingDir));
-    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactiveEntries);
+    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
     const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
-    const daemonEntries = normalizeOverrideDaemonEntries(override?.daemonEntries);
+    const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
     if (effectiveBin.length === 0) {
       throw new Error(`Unable to infer executable for ${owner}/${repo}; add a compatibility override.`);
     }
@@ -220,6 +221,7 @@ export const githubReleaseSource: SourceResolver<"github-release", GitHubRelease
       interactiveEntries,
       daemonEntries,
       persist: normalizeOverridePersist(override),
+      envSet: normalizeOverrideEnvSet(override),
       warnings: [
         ...normalizeOverrideWarnings(override),
         ...(overrideBin.length === 0 ? ["Executable auto-detected from release asset contents."] : []),

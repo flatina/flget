@@ -2,6 +2,7 @@ import { downloadToStore } from "../core/download";
 import { extractInto } from "../core/extract";
 import type { FundingInfo } from "../core/funding";
 import { fetchNpmPackageMetadata } from "../core/npm-registry";
+import { loadNamedOverride } from "../core/registry";
 import { getSourceFamilyByType } from "../core/source-family";
 import type {
   AppPackageMeta,
@@ -16,7 +17,17 @@ import type {
 import { slugify } from "../utils/strings";
 import { findExactNpmCatalog, searchNpmCatalog } from "./catalog-helpers";
 import { resolveInstalledPackageJsonFunding } from "./funding-helpers";
-import { finalizePreparedPackage } from "./helpers";
+import {
+  dedupeShimDefs,
+  finalizePreparedPackage,
+  normalizeOverrideBins,
+  normalizeOverrideDaemonEntries,
+  normalizeOverrideEnvSet,
+  normalizeOverrideInteractiveEntries,
+  normalizeOverrideNotes,
+  normalizeOverridePersist,
+  normalizeOverrideWarnings,
+} from "./helpers";
 import {
   installPackageJsonAppDependencies,
   normalizePackageJsonBins,
@@ -135,6 +146,7 @@ export const npmSource: SourceResolver<"npm", NpmResolvedExtra> = {
     reportPhase: (phase: TransactionPhase) => Promise<void>,
   ): Promise<PreparedPackage> {
     const { packageName, tarballUrl } = resolved.extra;
+    const override = await loadNamedOverride(context.root, "npm", packageName, context.config.useLocalOverrides);
 
     await reportPhase("downloading");
     const tarball = await downloadToStore(context, tarballUrl, {
@@ -148,21 +160,26 @@ export const npmSource: SourceResolver<"npm", NpmResolvedExtra> = {
     await installPackageJsonAppDependencies(stagingDir, options.noScripts === true);
     await runPackageJsonBuild(stagingDir, packageJson, options.noScripts === true);
 
-    const bin = normalizePackageJsonBins(packageJson);
-    if (bin.length === 0) {
+    const overrideBin = normalizeOverrideBins(override?.bin);
+    const effectiveBin = overrideBin.length > 0 ? overrideBin : normalizePackageJsonBins(packageJson);
+    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
+    const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
+    const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
+    if (effectiveBin.length === 0) {
       throw new Error(`No runnable bin entry found in package.json for ${packageName}`);
     }
 
     return finalizePreparedPackage(stagingDir, {
       displayName: packageJson.name ?? resolved.displayName,
-      portability: "portable",
-      runtime: "bun-native",
-      bin,
-      interactiveEntries: bin,
-      daemonEntries: [],
-      persist: [],
-      warnings: [],
-      notes: null,
+      portability: override?.portability ?? "portable",
+      runtime: override?.runtime ?? "bun-native",
+      bin: effectiveBin,
+      interactiveEntries,
+      daemonEntries,
+      persist: normalizeOverridePersist(override),
+      envSet: normalizeOverrideEnvSet(override),
+      warnings: normalizeOverrideWarnings(override),
+      notes: normalizeOverrideNotes(override),
     });
   },
 };

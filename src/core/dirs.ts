@@ -58,6 +58,7 @@ export async function ensureLayout(root: string): Promise<FlgetDirs> {
     ensureDir(dirs.temp),
     ensureDir(dirs.downloads),
     ensureDir(dirs.transactions),
+    ensureDir(join(dirs.localRegistries, "overrides", "npm")),
     ensureDir(join(dirs.localRegistries, "overrides", "github-release")),
     ensureDir(join(dirs.localRegistries, "overrides", "npm-github")),
     ensureDir(dirs.officialRegistries),

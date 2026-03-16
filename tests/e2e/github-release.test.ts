@@ -287,21 +287,17 @@ describe("github release e2e", () => {
     try {
       await bootstrapRoot(root, env);
       await writeFile(
-        join(root, "tmp", "registries", "local", "overrides", "github-release", "mock--test-ghr.json"),
-        `${JSON.stringify({
-          daemonEntries: [{
-            name: "test-ghr-daemon",
-            run: {
-              target: "test-ghr-windows.cmd",
-            },
-            status: {
-              target: "test-ghr-windows.cmd",
-            },
-            restartPolicy: "on-failure",
-            dependsOn: ["network"],
-            autoStart: true,
-          }],
-        }, null, 2)}\n`,
+        join(root, "tmp", "registries", "local", "overrides", "github-release", "mock--test-ghr.toml"),
+        [
+          "[[daemon]]",
+          'name = "test-ghr-daemon"',
+          'run = { target = "test-ghr-windows.cmd" }',
+          'status = { target = "test-ghr-windows.cmd" }',
+          'restartPolicy = "on-failure"',
+          'dependsOn = ["network"]',
+          "autoStart = true",
+          "",
+        ].join("\n"),
         "utf8",
       );
 
