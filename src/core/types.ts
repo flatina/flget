@@ -268,8 +268,8 @@ export interface RegistryOverride {
   assetPattern?: string;
   extractDir?: string;
   bin?: Partial<ShimDef>[];
-  interactiveEntries?: Partial<ShimDef>[];
-  daemonEntries?: Array<{
+  interactive?: Partial<ShimDef>[];
+  daemon?: Array<{
     name?: string;
     run?: Partial<ShimDef>;
     stop?: Partial<ShimDef>;
@@ -278,9 +278,13 @@ export interface RegistryOverride {
     dependsOn?: string[];
     autoStart?: boolean;
   }>;
-  persist?: Array<string | [string, string]>;
+  persist?: Array<{
+    source?: string;
+    target?: string;
+  }>;
+  env?: Record<string, string>;
   portability?: Portability;
   runtime?: RuntimeKind;
-  notes?: string | string[];
-  warnings?: string | string[];
+  notes?: string;
+  warnings?: string[];
 }

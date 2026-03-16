@@ -1,7 +1,6 @@
 import { basename, extname, join, relative } from "node:path";
 import { readdir } from "node:fs/promises";
 import type { DaemonEntry, PersistDef, PreparedPackage, RegistryOverride, RuntimeKind, ShimDef } from "../core/types";
-import { normalizePersistEntries } from "../core/persist";
 import { ensureRelativePathInsideRoot } from "../utils/fs";
 import { detectShimType, deriveShimName, inferShimRunner, wildcardToRegExp } from "../utils/strings";
 
@@ -31,7 +30,7 @@ export function normalizeOverrideBins(bins: RegistryOverride["bin"]): ShimDef[] 
   });
 }
 
-export function normalizeOverrideInteractiveEntries(entries: RegistryOverride["interactiveEntries"]): ShimDef[] {
+export function normalizeOverrideInteractiveEntries(entries: RegistryOverride["interactive"]): ShimDef[] {
   if (!entries) {
     return [];
   }
@@ -41,7 +40,7 @@ export function normalizeOverrideInteractiveEntries(entries: RegistryOverride["i
   });
 }
 
-export function normalizeOverrideDaemonEntries(entries: RegistryOverride["daemonEntries"]): DaemonEntry[] {
+export function normalizeOverrideDaemonEntries(entries: RegistryOverride["daemon"]): DaemonEntry[] {
   if (!entries) {
     return [];
   }
@@ -68,21 +67,46 @@ export function normalizeOverrideDaemonEntries(entries: RegistryOverride["daemon
 }
 
 export function normalizeOverridePersist(override: RegistryOverride | null): PersistDef[] {
-  return normalizePersistEntries(override?.persist);
+  if (!override?.persist) {
+    return [];
+  }
+  return override.persist.flatMap((entry) => {
+    if (!entry?.source) {
+      return [];
+    }
+    return [{
+      source: entry.source,
+      target: entry.target ?? entry.source,
+    }];
+  });
+}
+
+export function normalizeOverrideEnvSet(override: RegistryOverride | null): Record<string, string> | undefined {
+  if (!override?.env) {
+    return undefined;
+  }
+
+  const entries = Object.entries(override.env).filter((entry): entry is [string, string] => (
+    entry[0].length > 0 && typeof entry[1] === "string"
+  ));
+  if (entries.length === 0) {
+    return undefined;
+  }
+  return Object.fromEntries(entries);
 }
 
 export function normalizeOverrideWarnings(override: RegistryOverride | null): string[] {
-  if (!override?.warnings) {
+  if (!Array.isArray(override?.warnings)) {
     return [];
   }
-  return Array.isArray(override.warnings) ? override.warnings : [override.warnings];
+  return override.warnings.filter((warning): warning is string => typeof warning === "string");
 }
 
 export function normalizeOverrideNotes(override: RegistryOverride | null): string | null {
-  if (!override?.notes) {
+  if (typeof override?.notes !== "string" || override.notes.length === 0) {
     return null;
   }
-  return Array.isArray(override.notes) ? override.notes.join("\n") : override.notes;
+  return override.notes;
 }
 
 export function dedupeShimDefs(entries: ShimDef[]): ShimDef[] {

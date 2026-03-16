@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import type { FlgetConfig, RegistryOverride, RuntimeContext, SourceType } from "./types";
-import { pathExists, readJson } from "../utils/fs";
+import { pathExists } from "../utils/fs";
 import { getDirs } from "./dirs";
-import { scanGlob, spawnProcess } from "../utils/runtime";
+import { parseToml, readRuntimeText, scanGlob, spawnProcess } from "../utils/runtime";
 import { slugify } from "../utils/strings";
 
 interface RegistryLocation {
@@ -10,9 +10,16 @@ interface RegistryLocation {
   path: string;
 }
 
-async function findOverrideCandidates(root: string, sourceType: SourceType, owner: string, repo: string): Promise<RegistryLocation[]> {
+function buildOverrideFileName(parts: string[]): string {
+  return `${parts.map((part) => slugify(part)).join("--")}.toml`;
+}
+
+async function readOverride(path: string): Promise<RegistryOverride> {
+  return parseToml(await readRuntimeText(path)) as RegistryOverride;
+}
+
+async function findOverrideCandidates(root: string, sourceType: SourceType, fileName: string): Promise<RegistryLocation[]> {
   const dirs = getDirs(root);
-  const fileName = `${slugify(owner)}--${slugify(repo)}.json`;
   const locations: RegistryLocation[] = [];
 
   locations.push({
@@ -48,13 +55,33 @@ export async function loadOverride(
   repo: string,
   useLocalOverrides: boolean = true,
 ): Promise<RegistryOverride | null> {
-  const locations = await findOverrideCandidates(root, sourceType, owner, repo);
+  const locations = await findOverrideCandidates(root, sourceType, buildOverrideFileName([owner, repo]));
   for (const location of locations) {
     if (location.scope === "local" && !useLocalOverrides) {
       continue;
     }
     if (await pathExists(location.path)) {
-      return readJson<RegistryOverride>(location.path);
+      return readOverride(location.path);
+    }
+  }
+  return null;
+}
+
+export async function loadNamedOverride(
+  root: string,
+  sourceType: SourceType,
+  name: string,
+  useLocalOverrides: boolean = true,
+): Promise<RegistryOverride | null> {
+  const normalized = name.startsWith("@") ? name.slice(1) : name;
+  const parts = normalized.split("/").filter((part) => part.length > 0);
+  const locations = await findOverrideCandidates(root, sourceType, buildOverrideFileName(parts));
+  for (const location of locations) {
+    if (location.scope === "local" && !useLocalOverrides) {
+      continue;
+    }
+    if (await pathExists(location.path)) {
+      return readOverride(location.path);
     }
   }
   return null;

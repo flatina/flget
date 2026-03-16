@@ -4,17 +4,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readConfig, writeConfig } from "../src/core/config";
 import { applyExtractDir } from "../src/core/extract";
+import { regenerateEnvScripts } from "../src/core/env-script";
 import { detectKnownSponsorLink, extractGitHubRepoRef, parseGitHubFundingYaml, parsePackageFunding } from "../src/core/funding";
 import { applyPersistTransaction } from "../src/core/fs-transaction";
 import { parseHashSpec } from "../src/core/hash";
-import { loadPackageMeta } from "../src/core/metadata";
+import { loadPackageMeta, savePackageMeta, setPackageWinner } from "../src/core/metadata";
 import { getPackageBaseRelativePath } from "../src/core/package-layout";
 import { normalizePersistEntries } from "../src/core/persist";
 import { ensureRootInitialized, ensureRootScripts } from "../src/core/root";
 import { createShims } from "../src/core/shim";
 import { inferPackageLocationFromRelativeParts } from "../src/core/source-family";
 import { decryptSecretValue, encryptSecretsEnv } from "../src/core/secrets";
-import { chooseBestBinCandidate, collectExecutableCandidates, finalizePreparedPackage, normalizeOverrideDaemonEntries } from "../src/sources/helpers";
+import {
+  chooseBestBinCandidate,
+  collectExecutableCandidates,
+  finalizePreparedPackage,
+  normalizeOverrideDaemonEntries,
+  normalizeOverridePersist,
+} from "../src/sources/helpers";
 import { detectShimType, inferShimRunner, wildcardToRegExp } from "../src/utils/strings";
 
 describe("wildcardToRegExp", () => {
@@ -130,6 +137,18 @@ describe("daemon entry helpers", () => {
       dependsOn: ["network"],
       autoStart: true,
     }]);
+  });
+
+  test("normalizes TOML-friendly persist override entries", () => {
+    expect(normalizeOverridePersist({
+      persist: [
+        { source: "config.ini" },
+        { source: "data", target: "appdata" },
+      ],
+    })).toEqual([
+      { source: "config.ini", target: "config.ini" },
+      { source: "data", target: "appdata" },
+    ]);
   });
 });
 
@@ -253,6 +272,39 @@ describe("config source enablement", () => {
       npmgh: true,
       skill: false,
     });
+  });
+
+  test("expands envSet root placeholders into cached activation values", async () => {
+    const root = await mkdtemp(join(tmpdir(), "flget-config-"));
+    await ensureRootInitialized(root);
+
+    await mkdir(join(root, "npm", "codex"), { recursive: true });
+    await savePackageMeta(root, {
+      id: "codex",
+      installKind: "app",
+      displayName: "@openai/codex",
+      sourceType: "npm",
+      sourceRef: "npm:@openai/codex",
+      resolvedVersion: "1.0.0",
+      resolvedRef: "1.0.0",
+      portability: "portable",
+      runtime: "bun-native",
+      bin: [],
+      persist: [],
+      envSet: {
+        CODEX_HOME: "${FL_ROOT}\\.codex",
+        CODEX_CACHE: "${FL_CURRENT}\\cache",
+      },
+      warnings: [],
+      notes: null,
+    });
+    await setPackageWinner(root, { sourceType: "npm", id: "codex" });
+
+    await regenerateEnvScripts(root);
+
+    const cache = await readFile(join(root, "tmp", "cache-env-sets.txt"), "utf8");
+    expect(cache).toContain(`CODEX_HOME=${root}\\.codex`);
+    expect(cache).toContain(`CODEX_CACHE=${join(root, "npm", "codex", "current")}\\cache`);
   });
 });
 

@@ -21,6 +21,7 @@ import {
   finalizePreparedPackage,
   normalizeOverrideBins,
   normalizeOverrideDaemonEntries,
+  normalizeOverrideEnvSet,
   normalizeOverrideInteractiveEntries,
   normalizeOverrideNotes,
   normalizeOverridePersist,
@@ -158,9 +159,9 @@ export const npmGithubSource: SourceResolver<"npm-github", NpmGitHubResolvedExtr
 
     const overrideBin = normalizeOverrideBins(override?.bin);
     const effectiveBin = overrideBin.length > 0 ? overrideBin : normalizePackageJsonBins(packageJson);
-    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactiveEntries);
+    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
     const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
-    const daemonEntries = normalizeOverrideDaemonEntries(override?.daemonEntries);
+    const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
     if (effectiveBin.length === 0) {
       throw new Error(`No runnable bin entry found in package.json for ${owner}/${repo}`);
     }
@@ -173,6 +174,7 @@ export const npmGithubSource: SourceResolver<"npm-github", NpmGitHubResolvedExtr
       interactiveEntries,
       daemonEntries,
       persist: normalizeOverridePersist(override),
+      envSet: normalizeOverrideEnvSet(override),
       warnings: normalizeOverrideWarnings(override),
       notes: normalizeOverrideNotes(override),
     });
