@@ -35,7 +35,7 @@ Usage:
   flget repair [package]
   flget root <add|remove|list|first|last> ...
   flget bucket <add|remove|list|update> ...
-  flget registry <list|add|remove|update> ...
+  flget compat <list|add|remove|update> ...
 
 Aliases:
   i   install
@@ -164,7 +164,7 @@ const COMMANDS: CommandSpec[] = [
     },
   }),
   defineRuntimeCommand({
-    name: "registry",
+    name: "compat",
     contextMode: "create",
     async run(parsed, _installOptions, context) {
       await runRegistryCommand(context, parsed.positional);

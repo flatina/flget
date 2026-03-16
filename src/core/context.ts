@@ -34,7 +34,7 @@ export function createEphemeralContext(root: string, logLevel: RuntimeContext["c
     sources: { ...DEFAULT_SOURCE_ENABLEMENT },
     buckets: [],
     roots: [],
-    compatibilityRegistries: {
+    compatRegistries: {
       official: [],
       community: [],
     },

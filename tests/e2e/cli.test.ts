@@ -42,6 +42,7 @@ describe("flget CLI surface", () => {
     expect(result.stdout).toContain("Aliases:");
     expect(result.stdout).toContain("Sources:");
     expect(result.stdout).toContain("Global options:");
+    expect(result.stdout).not.toContain("compat registry");
   });
 
   test("invalid install flags are rejected before dispatch", async () => {
@@ -148,7 +149,7 @@ Write-Host "mock self update"
     }
   });
 
-  test("bucket and registry usage errors are reported", async () => {
+  test("bucket and compat usage errors are reported", async () => {
     const workspace = await makeWorkspace();
     const root = join(workspace.dir, "root");
 
@@ -158,9 +159,13 @@ Write-Host "mock self update"
     expect(bucket.exitCode).toBe(1);
     expect(bucket.stderr).toContain("Usage: flget bucket <add|remove|list|update> ...");
 
-    const registry = await runProcess([process.execPath, cliPath, "registry"], root);
-    expect(registry.exitCode).toBe(1);
-    expect(registry.stderr).toContain("Usage: flget registry <list|add|remove|update> ...");
+    const compat = await runProcess([process.execPath, cliPath, "compat"], root);
+    expect(compat.exitCode).toBe(1);
+    expect(compat.stderr).toContain("Usage: flget compat <list|add|remove|update> ...");
+
+    const registryAlias = await runProcess([process.execPath, cliPath, "registry"], root);
+    expect(registryAlias.exitCode).toBe(1);
+    expect(registryAlias.stderr).toContain("Unknown command: registry");
 
     const roots = await runProcess([process.execPath, cliPath, "root"], root);
     expect(roots.exitCode).toBe(1);
