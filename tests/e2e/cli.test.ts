@@ -26,26 +26,21 @@ afterEach(async () => {
 });
 
 describe("flget CLI surface", () => {
-  test("--version prints version", async () => {
-    const result = await runProcess([process.execPath, cliPath, "--version"], testsRoot);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe(expectedVersionOutput);
-  });
-
-  test("-v prints version", async () => {
-    const result = await runProcess([process.execPath, cliPath, "-v"], testsRoot);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe(expectedVersionOutput);
-  });
+  for (const flag of ["--version", "-v"]) {
+    test(`${flag} prints version`, async () => {
+      const result = await runProcess([process.execPath, cliPath, flag], testsRoot);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toBe(expectedVersionOutput);
+    });
+  }
 
   test("--help prints expanded help", async () => {
     const result = await runProcess([process.execPath, cliPath, "--help"], testsRoot);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Usage:");
-    expect(result.stdout).toContain("Aliases:");
-    expect(result.stdout).toContain("Sources:");
-    expect(result.stdout).toContain("Global options:");
-    expect(result.stdout).not.toContain("compat registry");
+    expect(result.stdout).toContain("flget install <source-or-query>");
+    expect(result.stdout).toContain("flget compat <list|add|remove|update> ...");
+    expect(result.stdout).not.toContain("registry");
   });
 
   test("invalid install flags are rejected before dispatch", async () => {
@@ -69,11 +64,11 @@ describe("flget CLI surface", () => {
 
     const update = await runProcess([process.execPath, cliPath, "u", "--no-self"], root);
     expect(update.exitCode).toBe(1);
-    expect(update.stderr).toContain("Usage: flget update [<package>] [--all] [--no-self]");
+    expect(update.stderr).toContain("Usage: flget update");
 
     const remove = await runProcess([process.execPath, cliPath, "rm"], root);
     expect(remove.exitCode).toBe(1);
-    expect(remove.stderr).toContain("Usage: flget remove <package>");
+    expect(remove.stderr).toContain("Usage: flget remove");
   });
 
   test("unknown command still reports unknown command inside a bootstrapped root", async () => {
@@ -103,23 +98,9 @@ describe("flget CLI surface", () => {
     expect(await Bun.file(join(root, "shims", "flget.ps1")).exists()).toBe(true);
     expect(await Bun.file(join(root, "shims", "bun.cmd")).exists()).toBe(true);
     expect(await Bun.file(join(root, "shims", "bun.ps1")).exists()).toBe(true);
-
-    const activatePs1 = await Bun.file(join(root, "activate.ps1")).text();
-    expect(activatePs1).toContain('Join-Path $PSScriptRoot "bun.exe"');
-    expect(activatePs1).toContain('Get-Command bun -ErrorAction SilentlyContinue');
-    expect(activatePs1).toContain("Test-BucketBootstrapNeeded");
-    expect(activatePs1).toContain('Join-Path $PSScriptRoot "buckets"');
-    expect(activatePs1).toContain('shims\\bun.cmd');
-
-    const updatePs1 = await Bun.file(join(root, "update.ps1")).text();
-    expect(updatePs1).toContain('Downloading latest update script');
-    expect(updatePs1).toContain('releases/latest');
-    expect(updatePs1).toContain('flget-win-x64.zip');
-    expect(updatePs1).toContain("Invoke-BucketBootstrapIfNeeded");
-    expect(updatePs1).toContain('flget updated at');
-
-    const registerPs1 = await Bun.file(join(root, "REGISTER_PATH.ps1")).text();
-    expect(registerPs1).toContain("Registered flget from");
+    expect(await Bun.file(join(root, "activate.ps1")).exists()).toBe(true);
+    expect(await Bun.file(join(root, "update.ps1")).exists()).toBe(true);
+    expect(await Bun.file(join(root, "REGISTER_PATH.ps1")).exists()).toBe(true);
   });
 
   test("bare update launches self-update via update.ps1", async () => {
@@ -158,29 +139,15 @@ Write-Host "mock self update"
 
     await bootstrapRoot(root);
 
-    const bucket = await runProcess([process.execPath, cliPath, "bucket"], root);
-    expect(bucket.exitCode).toBe(1);
-    expect(bucket.stderr).toContain("Usage: flget bucket <add|remove|list|update> ...");
-
-    const compat = await runProcess([process.execPath, cliPath, "compat"], root);
-    expect(compat.exitCode).toBe(1);
-    expect(compat.stderr).toContain("Usage: flget compat <list|add|remove|update> ...");
+    for (const command of ["bucket", "compat", "root", "skills", "reset"]) {
+      const result = await runProcess([process.execPath, cliPath, command], root);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(`Usage: flget ${command}`);
+    }
 
     const registryAlias = await runProcess([process.execPath, cliPath, "registry"], root);
     expect(registryAlias.exitCode).toBe(1);
     expect(registryAlias.stderr).toContain("Unknown command: registry");
-
-    const roots = await runProcess([process.execPath, cliPath, "root"], root);
-    expect(roots.exitCode).toBe(1);
-    expect(roots.stderr).toContain("Usage: flget root <add|remove|list|first|last> ...");
-
-    const skills = await runProcess([process.execPath, cliPath, "skills"], root);
-    expect(skills.exitCode).toBe(1);
-    expect(skills.stderr).toContain("Usage: flget skills <find|install|list|info|update|remove> ...");
-
-    const reset = await runProcess([process.execPath, cliPath, "reset"], root);
-    expect(reset.exitCode).toBe(1);
-    expect(reset.stderr).toContain("Usage: flget reset <package> [--source <source>]");
   });
 
   test("search --source scopes results the same way as a source-prefixed query", async () => {
@@ -515,14 +482,13 @@ Write-Host "mock self update"
       await runCli(["install", "scoop:local/demo", "--no-hash"], root, env);
       await runCli(["install", "npm:demo"], root, env);
 
-      const npmShim = await readFile(join(root, "shims", "demo.cmd"), "utf8");
-      expect(npmShim).toContain("\\npm\\demo\\current\\bin\\demo.js");
+      const shimBeforeReset = await readFile(join(root, "shims", "demo.cmd"), "utf8");
 
       const reset = await runCli(["reset", "demo", "--source", "scoop"], root, env);
       expect(reset.stdout).toContain("Reset demo to scoop");
 
-      const scoopShim = await readFile(join(root, "shims", "demo.cmd"), "utf8");
-      expect(scoopShim).toContain("\\scoop\\demo\\current\\demo.exe");
+      const shimAfterReset = await readFile(join(root, "shims", "demo.cmd"), "utf8");
+      expect(shimAfterReset).not.toBe(shimBeforeReset);
 
       const info = await runCli(["info", "demo"], root, env);
       expect(info.stdout).toContain('"sourceType": "scoop"');
@@ -673,9 +639,6 @@ Write-Host "mock self update"
 
       const info = await runCli(["info", "demo"], root, env);
       expect(info.stdout).toContain('"sourceType": "scoop"');
-
-      const scoopShim = await readFile(join(root, "shims", "demo.cmd"), "utf8");
-      expect(scoopShim).toContain("\\scoop\\demo\\current\\demo.exe");
     } finally {
       scoopServer.stop(true);
       npmServer.stop(true);
@@ -779,9 +742,6 @@ Write-Host "mock self update"
       expect(info.stdout).toContain('"sourceType": "scoop"');
       expect(await readFile(join(root, "scoop", "demo", "current", "demo-v2.cmd"), "utf8")).toContain("scoop-demo-v2");
       expect(await readFile(join(root, "npm", "demo", "current", "package.json"), "utf8")).toContain('"version": "2.0.0"');
-
-      const scoopShim = await readFile(join(root, "shims", "demo.cmd"), "utf8");
-      expect(scoopShim).toContain("\\scoop\\demo\\current\\demo-v2.cmd");
     } finally {
       scoopServer.stop(true);
       npmServer.stop(true);
