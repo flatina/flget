@@ -35,7 +35,8 @@ export interface MockNpmRegistryState {
 }
 
 export const cliPath = fileURLToPath(new URL("../../src/cli.ts", import.meta.url));
-export const fixtureRoot = fileURLToPath(new URL("..", import.meta.url));
+export const testsRoot = fileURLToPath(new URL("..", import.meta.url));
+export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const staticRootSource = fileURLToPath(new URL("../../github-pages/", import.meta.url));
 
 async function copyStaticRootScripts(root: string): Promise<void> {
