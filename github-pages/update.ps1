@@ -25,17 +25,10 @@ function Ensure-Directory {
 function Get-BunAssetName {
   $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
   switch ($arch.ToString()) {
-    "Arm64" { return "bun-windows-aarch64.zip" }
-    "X64" { return "bun-windows-x64.zip" }
+    "Arm64" { return "flget-windows-aarch64.zip" }
+    "X64" { return "flget-windows-x64.zip" }
     default { throw "Unsupported Windows architecture: $arch" }
   }
-}
-
-function Get-BunUrl {
-  if ($env:FLGET_BUN_DOWNLOAD_URL) {
-    return $env:FLGET_BUN_DOWNLOAD_URL
-  }
-  return "https://github.com/oven-sh/bun/releases/latest/download/$(Get-BunAssetName)"
 }
 
 function Get-ReleaseApiBaseUrl {
@@ -232,7 +225,7 @@ if (-not $ApplyDownloadedUpdate) {
 $sessionDir = Join-Path $resolvedRoot ("tmp\\self-update\\session-" + [guid]::NewGuid().ToString("N"))
 $newDir = Join-Path $sessionDir "new"
 $oldDir = Join-Path $sessionDir "old"
-$bunExtract = Join-Path $sessionDir "bun"
+$archiveExtract = Join-Path $sessionDir "archive"
 $cleanupSession = $true
 
 Ensure-Directory $newDir
@@ -256,28 +249,17 @@ try {
   $releaseLabel = if ($release.tag_name) { $release.tag_name } else { "latest release" }
   Write-Step "Using runtime assets from $releaseLabel"
 
-  $assets = @(
-    @{ Name = "flget.js"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "flget.js") },
-    @{ Name = "flget.js.map"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "flget.js.map") },
-    @{ Name = "activate.ps1"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "activate.ps1") },
-    @{ Name = "REGISTER_PATH.ps1"; Url = (Get-RequiredReleaseAssetUrl -Release $release -Name "REGISTER_PATH.ps1") },
-    @{ Name = "update.ps1"; Url = "$normalizedBaseUrl/update.ps1" }
-  )
+  $runtimeArchive = Join-Path $sessionDir "flget-runtime.zip"
+  Download-File -Url (Get-RequiredReleaseAssetUrl -Release $release -Name (Get-BunAssetName)) -OutFile $runtimeArchive
+  Expand-Archive -LiteralPath $runtimeArchive -DestinationPath $archiveExtract -Force
 
-  foreach ($asset in $assets) {
-    Download-File -Url $asset.Url -OutFile (Join-Path $newDir $asset.Name)
+  foreach ($name in $rootFiles) {
+    $sourcePath = Join-Path $archiveExtract $name
+    if (-not (Test-Path -LiteralPath $sourcePath)) {
+      throw "Required file missing from release archive: $name"
+    }
+    Move-Item -LiteralPath $sourcePath -Destination (Join-Path $newDir $name) -Force
   }
-
-  Write-Step "Downloading Bun runtime"
-  $bunZip = Join-Path $sessionDir "bun.zip"
-  Download-File -Url (Get-BunUrl) -OutFile $bunZip
-  Expand-Archive -LiteralPath $bunZip -DestinationPath $bunExtract -Force
-
-  $downloadedBun = Get-ChildItem -Path $bunExtract -Filter bun.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
-  if (-not $downloadedBun) {
-    throw "bun.exe not found in downloaded archive."
-  }
-  Copy-Item -LiteralPath $downloadedBun -Destination (Join-Path $newDir "bun.exe") -Force
 
   Write-Step "Swapping root runtime files"
   foreach ($name in $rootFiles) {
