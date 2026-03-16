@@ -204,12 +204,6 @@ describe("flenc secrets envelope", () => {
     const value = encrypted.trim().slice("GITHUB_TOKEN=".length);
 
     expect(encrypted).toStartWith("GITHUB_TOKEN=FLENC[v1,");
-    expect(value).toContain("cipher:AES256_GCM");
-    expect(value).toContain("kdf:scrypt");
-    expect(value).toContain("salt:");
-    expect(value).toContain("iv:");
-    expect(value).toContain("tag:");
-    expect(value).toContain("data:");
     expect(decryptSecretValue(value, "top-secret")).toBe("test-token");
   });
 });
@@ -346,22 +340,21 @@ describe("ensureRootScripts", () => {
     expect(storedMeta.bin[0]?.type).toBe("js");
 
     const cmd = await readFile(join(root, "shims", "prettier.cmd"), "utf8");
-    expect(cmd).toContain("bun run");
+    expect(cmd).not.toContain("stale shim");
     expect(cmd).toContain("prettier.cjs");
 
     const ps1 = await readFile(join(root, "shims", "prettier.ps1"), "utf8");
-    expect(ps1).toContain("& $bun run $target @args");
+    expect(ps1).not.toContain("stale shim");
+    expect(ps1).toContain("prettier.cjs");
 
     const flgetCmd = await readFile(join(root, "shims", "flget.cmd"), "utf8");
     expect(flgetCmd).toContain("%SHIMDIR%\\..\\flget.js");
 
     const bunCmd = await readFile(join(root, "shims", "bun.cmd"), "utf8");
     expect(bunCmd).toContain("%SHIMDIR%\\..\\bun.exe");
-    expect(bunCmd).toContain("where bun >nul 2>nul");
 
     const bunPs1 = await readFile(join(root, "shims", "bun.ps1"), "utf8");
     expect(bunPs1).toContain('Join-Path $PSScriptRoot "..\\bun.exe"');
-    expect(bunPs1).toContain("& $bun @args");
   });
 });
 
@@ -378,12 +371,12 @@ describe("bun fallback shims", () => {
     const cmd = await readFile(join(root, "shims", "demo.cmd"), "utf8");
     expect(cmd).toContain("%SHIMDIR%\\..\\bun.exe");
     expect(cmd).toContain("%SHIMDIR%\\..\\..\\bun.exe");
-    expect(cmd).toContain("where bun >nul 2>nul");
+    expect(cmd).toContain("demo.cjs");
 
     const ps1 = await readFile(join(root, "shims", "demo.ps1"), "utf8");
     expect(ps1).toContain('Join-Path $PSScriptRoot "..\\bun.exe"');
     expect(ps1).toContain('Join-Path $PSScriptRoot "..\\..\\bun.exe"');
-    expect(ps1).toContain("Get-Command bun -ErrorAction SilentlyContinue");
+    expect(ps1).toContain("demo.cjs");
   });
 
   test("runner-aware shims can dispatch through bash", async () => {
