@@ -36,7 +36,7 @@ export interface FlgetConfig {
   sources: SourceEnablementConfig;
   buckets: BucketConfig[];
   roots: RootConfig[];
-  compatibilityRegistries: {
+  compatRegistries: {
     official: string[];
     community: string[];
   };

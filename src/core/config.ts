@@ -17,9 +17,9 @@ export function getDefaultConfig(): FlgetConfig {
       },
     ],
     roots: [],
-    compatibilityRegistries: {
+    compatRegistries: {
       official: [
-        "https://github.com/flatina/flget-registry",
+        "https://github.com/flatina/flget-compat",
       ],
       community: [],
     },
@@ -49,9 +49,9 @@ function formatRootConfigToml(config: FlgetConfig): string {
     `npmgh = ${config.sources.npmgh ? "true" : "false"}`,
     `skill = ${config.sources.skill ? "true" : "false"}`,
     "",
-    "[compatibilityRegistries]",
-    formatStringArray("official", config.compatibilityRegistries.official),
-    formatStringArray("community", config.compatibilityRegistries.community),
+    "[compatRegistries]",
+    formatStringArray("official", config.compatRegistries.official),
+    formatStringArray("community", config.compatRegistries.community),
   ];
 
   for (const bucket of config.buckets) {
@@ -85,7 +85,11 @@ function ensureStringArray(value: unknown): string[] {
 function parseTomlConfig(content: string): FlgetConfig {
   const parsed = parseToml(content) as Record<string, unknown>;
   const sources = parsed.sources;
-  const compatibilityRegistries = parsed.compatibilityRegistries as Record<string, unknown> | undefined;
+  const compatRegistries = (
+    parsed.compatRegistries as Record<string, unknown> | undefined
+  ) ?? (
+    parsed.compatibilityRegistries as Record<string, unknown> | undefined
+  );
 
   return {
     version: Number(parsed.version) === 1 ? 1 : 1,
@@ -116,9 +120,9 @@ function parseTomlConfig(content: string): FlgetConfig {
         return [{ path: root.path }];
       })
       : [],
-    compatibilityRegistries: {
-      official: ensureStringArray(compatibilityRegistries?.official),
-      community: ensureStringArray(compatibilityRegistries?.community),
+    compatRegistries: {
+      official: ensureStringArray(compatRegistries?.official),
+      community: ensureStringArray(compatRegistries?.community),
     },
     useLocalOverrides: parsed.useLocalOverrides !== false,
   };

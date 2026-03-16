@@ -62,8 +62,8 @@ export async function loadOverride(
 
 export function listConfiguredRegistries(config: FlgetConfig): Array<{ scope: "official" | "community"; url: string }> {
   return [
-    ...config.compatibilityRegistries.official.map((url) => ({ scope: "official" as const, url })),
-    ...config.compatibilityRegistries.community.map((url) => ({ scope: "community" as const, url })),
+    ...config.compatRegistries.official.map((url) => ({ scope: "official" as const, url })),
+    ...config.compatRegistries.community.map((url) => ({ scope: "community" as const, url })),
   ];
 }
 
@@ -83,7 +83,7 @@ function getRegistryDir(context: RuntimeContext, scope: "official" | "community"
 
 async function syncOneRegistry(context: RuntimeContext, scope: "official" | "community", url: string): Promise<void> {
   if (!await commandExists("git")) {
-    throw new Error("git is required to sync compatibility registries");
+    throw new Error("git is required to sync compatibility sources");
   }
 
   const target = getRegistryDir(context, scope, url);
@@ -100,15 +100,15 @@ async function syncOneRegistry(context: RuntimeContext, scope: "official" | "com
   const exitCode = await process.exited;
   if (exitCode !== 0) {
     const stderr = await new Response(process.stderr).text();
-    throw new Error(`Registry sync failed for ${url}: ${stderr.trim() || "unknown error"}`);
+    throw new Error(`Compat source sync failed for ${url}: ${stderr.trim() || "unknown error"}`);
   }
 }
 
 export async function syncRegistries(context: RuntimeContext): Promise<void> {
-  for (const url of context.config.compatibilityRegistries.official) {
+  for (const url of context.config.compatRegistries.official) {
     await syncOneRegistry(context, "official", url);
   }
-  for (const url of context.config.compatibilityRegistries.community) {
+  for (const url of context.config.compatRegistries.community) {
     await syncOneRegistry(context, "community", url);
   }
 }

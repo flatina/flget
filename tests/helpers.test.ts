@@ -223,8 +223,8 @@ describe("config source enablement", () => {
       npmgh: true,
       skill: true,
     });
-    expect(defaultConfig.compatibilityRegistries.official).toEqual([
-      "https://github.com/flatina/flget-registry",
+    expect(defaultConfig.compatRegistries.official).toEqual([
+      "https://github.com/flatina/flget-compat",
     ]);
 
     await writeFile(join(root, "flget.root.toml"), "version = 1\narch = ''\nlogLevel = \"info\"\nuseLocalOverrides = true\n");

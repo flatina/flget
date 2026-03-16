@@ -16,30 +16,30 @@ export async function runRegistryCommand(context: RuntimeContext, args: string[]
     case "add": {
       const [url] = rest;
       if (!url) {
-        throw new Error("Usage: flget registry add <url>");
+        throw new Error("Usage: flget compat add <url>");
       }
-      if (!config.compatibilityRegistries.community.includes(url)) {
-        config.compatibilityRegistries.community.push(url);
+      if (!config.compatRegistries.community.includes(url)) {
+        config.compatRegistries.community.push(url);
         await writeConfig(context.root, config);
       }
-      console.log(`Added community registry ${url}`);
+      console.log(`Added community compat source ${url}`);
       return;
     }
     case "remove": {
       const [url] = rest;
       if (!url) {
-        throw new Error("Usage: flget registry remove <url>");
+        throw new Error("Usage: flget compat remove <url>");
       }
-      config.compatibilityRegistries.community = config.compatibilityRegistries.community.filter((entry) => entry !== url);
+      config.compatRegistries.community = config.compatRegistries.community.filter((entry) => entry !== url);
       await writeConfig(context.root, config);
-      console.log(`Removed community registry ${url}`);
+      console.log(`Removed community compat source ${url}`);
       return;
     }
     case "update":
       await syncRegistries({ ...context, config });
-      console.log("Updated compatibility registries");
+      console.log("Updated compatibility sources");
       return;
     default:
-      throw new Error("Usage: flget registry <list|add|remove|update> ...");
+      throw new Error("Usage: flget compat <list|add|remove|update> ...");
   }
 }
