@@ -14,9 +14,7 @@ $tmpRoot = "$([System.IO.Path]::GetTempPath())\flget-e2e-$([guid]::NewGuid().ToS
 function Wait-File($path, [int]$timeoutSeconds = 30) {
   $deadline = (Get-Date).AddSeconds($timeoutSeconds)
   while ((Get-Date) -lt $deadline) {
-    if (Test-Path $path) {
-      return
-    }
+    if (Test-Path $path) { return }
     Start-Sleep -Milliseconds 100
   }
   throw "Timed out waiting for $path"
@@ -25,11 +23,7 @@ function Wait-File($path, [int]$timeoutSeconds = 30) {
 function Get-FreePort {
   $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
   $listener.Start()
-  try {
-    $listener.LocalEndpoint.Port
-  } finally {
-    $listener.Stop()
-  }
+  try { $listener.LocalEndpoint.Port } finally { $listener.Stop() }
 }
 
 function Read-Json($path) {
@@ -58,238 +52,123 @@ function Use-Env($envMap, [scriptblock]$action) {
   }
 }
 
+function New-Scenario([string]$name) {
+  Write-Host "==> $name"
+  $root = "$tmpRoot\$name"
+  New-Item -ItemType Directory -Force -Path $root | Out-Null
+  $port = Get-FreePort
+
+  & "$e2eRoot\$name.setup.ps1" `
+    -RepoRoot $repoRoot `
+    -ServerRoot "$root\server" `
+    -InstallRoot "$root\installed" `
+    -BaseUrl "http://127.0.0.1:$port" `
+    -ExpectedReleaseTag "v$version" `
+    -BunExePath $bunExe `
+    -OutFile "$root\setup.json"
+
+  return @{ root = $root; port = $port; setup = (Read-Json "$root\setup.json") }
+}
+
+function Start-Mock([string]$script, [string]$readyFile, [string[]]$mockArgs) {
+  Remove-Item $readyFile -ErrorAction SilentlyContinue
+  $job = & {
+    Set-Location $repoRoot
+    bun run ".\tests\mocks\$script" @mockArgs --ready-file $readyFile
+  } &
+  Wait-File $readyFile
+  return @{ job = $job; info = (Read-Json $readyFile) }
+}
+
 New-Item -ItemType Directory -Path $tmpRoot | Out-Null
 
 try {
-  Write-Host "==> install-from-update-script"
-  $scenarioRoot = "$tmpRoot\install-from-update-script"
-  $installRoot = "$scenarioRoot\installed"
-  $serverRoot = "$scenarioRoot\server"
-  $setupJson = "$scenarioRoot\setup.json"
-  $serverReady = "$scenarioRoot\server-ready.json"
-  $port = Get-FreePort
-  $baseUrl = "http://127.0.0.1:$port"
-  New-Item -ItemType Directory -Force -Path $scenarioRoot | Out-Null
-
-  & "$e2eRoot\install-from-update-script.setup.ps1" `
-    -RepoRoot $repoRoot `
-    -ServerRoot $serverRoot `
-    -InstallRoot $installRoot `
-    -BaseUrl $baseUrl `
-    -ExpectedReleaseTag "v$version" `
-    -BunExePath $bunExe `
-    -OutFile $setupJson
-
-  $staticServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\static-file-server.ts --root $serverRoot --port $port --ready-file $serverReady
-  } &
-
-  Wait-File $serverReady
+  $s = New-Scenario "install-from-update-script"
+  $static = Start-Mock "static-file-server" "$($s.root)\static-ready.json" @("--root", "$($s.root)\server", "--port", "$($s.port)")
   try {
-    $setup = Read-Json $setupJson
-    Use-Env $setup.env {
+    Use-Env $s.setup.env {
       & "$e2eRoot\install-from-update-script.flow.ps1" `
-        -BaseUrl $setup.baseUrl `
-        -InstallRoot $setup.installRoot `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion
     }
   } finally {
-    $staticServer | Remove-Job -Force -ErrorAction SilentlyContinue
+    $static.job | Remove-Job -Force -ErrorAction SilentlyContinue
   }
 
-  Write-Host "==> multi-source-user-workflow"
-  $scenarioRoot = "$tmpRoot\multi-source"
-  $installRoot = "$scenarioRoot\installed"
-  $serverRoot = "$scenarioRoot\server"
-  $setupJson = "$scenarioRoot\setup.json"
-  $staticReady = "$scenarioRoot\static-ready.json"
-  $githubReady = "$scenarioRoot\github-ready.json"
-  $npmReady = "$scenarioRoot\npm-ready.json"
-  $port = Get-FreePort
-  $baseUrl = "http://127.0.0.1:$port"
-  New-Item -ItemType Directory -Force -Path $scenarioRoot | Out-Null
-
-  & "$e2eRoot\multi-source-user-workflow.setup.ps1" `
-    -RepoRoot $repoRoot `
-    -ServerRoot $serverRoot `
-    -InstallRoot $installRoot `
-    -BaseUrl $baseUrl `
-    -ExpectedReleaseTag "v$version" `
-    -BunExePath $bunExe `
-    -OutFile $setupJson
-
-  $setup = Read-Json $setupJson
-  $staticServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\static-file-server.ts --root $serverRoot --port $port --ready-file $staticReady
-  } &
-  $githubServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\github-mock.ts --state $setup.githubStatePath --ready-file $githubReady
-  } &
-  $npmServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\npm-registry-mock.ts --state $setup.npmStatePath --ready-file $npmReady
-  } &
-
-  Wait-File $staticReady
-  Wait-File $githubReady
-  Wait-File $npmReady
+  $s = New-Scenario "multi-source-user-workflow"
+  $static = Start-Mock "static-file-server" "$($s.root)\static-ready.json" @("--root", "$($s.root)\server", "--port", "$($s.port)")
+  $github = Start-Mock "github-mock" "$($s.root)\github-ready.json" @("--state", $s.setup.githubStatePath)
+  $npm = Start-Mock "npm-registry-mock" "$($s.root)\npm-ready.json" @("--state", $s.setup.npmStatePath)
   try {
-    $github = Read-Json $githubReady
-    $npm = Read-Json $npmReady
-    $envMap = @{}
-    foreach ($entry in $setup.env.GetEnumerator()) {
-      $envMap[$entry.Key] = $entry.Value
-    }
-    $envMap.FLGET_GITHUB_API_BASE_URL = $github.baseUrl
-    $envMap.FLGET_NPM_REGISTRY_BASE_URL = $npm.baseUrl
-
+    $envMap = $s.setup.env.Clone()
+    $envMap.FLGET_GITHUB_API_BASE_URL = $github.info.baseUrl
+    $envMap.FLGET_NPM_REGISTRY_BASE_URL = $npm.info.baseUrl
     Use-Env $envMap {
       & "$e2eRoot\multi-source-user-workflow.flow.ps1" `
-        -BaseUrl $setup.baseUrl `
-        -InstallRoot $setup.installRoot `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion `
-        -GitHubApiBaseUrl $github.baseUrl `
-        -NpmRegistryBaseUrl $npm.baseUrl
+        -GitHubApiBaseUrl $github.info.baseUrl `
+        -NpmRegistryBaseUrl $npm.info.baseUrl
     }
   } finally {
-    $staticServer | Remove-Job -Force -ErrorAction SilentlyContinue
-    $githubServer | Remove-Job -Force -ErrorAction SilentlyContinue
-    $npmServer | Remove-Job -Force -ErrorAction SilentlyContinue
+    $static.job, $github.job, $npm.job | Remove-Job -Force -ErrorAction SilentlyContinue
   }
 
-  Write-Host "==> shared-id-user-workflow"
-  $scenarioRoot = "$tmpRoot\shared-id"
-  $installRoot = "$scenarioRoot\installed"
-  $serverRoot = "$scenarioRoot\server"
-  $setupJson = "$scenarioRoot\setup.json"
-  $staticReady = "$scenarioRoot\static-ready.json"
-  $npmReady = "$scenarioRoot\npm-ready.json"
-  $port = Get-FreePort
-  $baseUrl = "http://127.0.0.1:$port"
-  New-Item -ItemType Directory -Force -Path $scenarioRoot | Out-Null
-
-  & "$e2eRoot\shared-id-user-workflow.setup.ps1" `
-    -RepoRoot $repoRoot `
-    -ServerRoot $serverRoot `
-    -InstallRoot $installRoot `
-    -BaseUrl $baseUrl `
-    -ExpectedReleaseTag "v$version" `
-    -BunExePath $bunExe `
-    -OutFile $setupJson
-
-  $setup = Read-Json $setupJson
-  $staticServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\static-file-server.ts --root $serverRoot --port $port --ready-file $staticReady
-  } &
-  $npmServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\npm-registry-mock.ts --state $setup.npmStatePath --ready-file $npmReady
-  } &
-
-  Wait-File $staticReady
-  Wait-File $npmReady
+  $s = New-Scenario "shared-id-user-workflow"
+  $static = Start-Mock "static-file-server" "$($s.root)\static-ready.json" @("--root", "$($s.root)\server", "--port", "$($s.port)")
+  $npm = Start-Mock "npm-registry-mock" "$($s.root)\npm-ready.json" @("--state", $s.setup.npmStatePath)
   try {
-    $npm = Read-Json $npmReady
-    $envMap = @{}
-    foreach ($entry in $setup.env.GetEnumerator()) {
-      $envMap[$entry.Key] = $entry.Value
-    }
-    $envMap.FLGET_NPM_REGISTRY_BASE_URL = $npm.baseUrl
-
+    $envMap = $s.setup.env.Clone()
+    $envMap.FLGET_NPM_REGISTRY_BASE_URL = $npm.info.baseUrl
     Use-Env $envMap {
       & "$e2eRoot\shared-id-user-workflow.flow.ps1" `
-        -BaseUrl $setup.baseUrl `
-        -InstallRoot $setup.installRoot `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion `
-        -NpmRegistryBaseUrl $npm.baseUrl `
-        -BucketRepoPath $setup.bucketRepoPath `
+        -NpmRegistryBaseUrl $npm.info.baseUrl `
+        -BucketRepoPath $s.setup.bucketRepoPath `
         -Phase install
     }
 
-    $npmServer | Remove-Job -Force -ErrorAction SilentlyContinue
+    $npm.job | Remove-Job -Force -ErrorAction SilentlyContinue
     & "$e2eRoot\shared-id-user-workflow.promote.ps1" `
       -RepoRoot $repoRoot `
-      -BaseUrl $setup.baseUrl `
-      -BucketRepoPath $setup.bucketRepoPath `
-      -NpmStatePath $setup.npmStatePath
+      -BaseUrl $s.setup.baseUrl `
+      -BucketRepoPath $s.setup.bucketRepoPath `
+      -NpmStatePath $s.setup.npmStatePath
 
-    Remove-Item $npmReady -ErrorAction SilentlyContinue
-    $npmServer = & {
-      Set-Location $repoRoot
-      bun run .\tests\mocks\npm-registry-mock.ts --state $setup.npmStatePath --ready-file $npmReady
-    } &
-    Wait-File $npmReady
-    $npm = Read-Json $npmReady
-    $envMap.FLGET_NPM_REGISTRY_BASE_URL = $npm.baseUrl
-
+    $npm = Start-Mock "npm-registry-mock" "$($s.root)\npm-ready.json" @("--state", $s.setup.npmStatePath)
+    $envMap.FLGET_NPM_REGISTRY_BASE_URL = $npm.info.baseUrl
     Use-Env $envMap {
       & "$e2eRoot\shared-id-user-workflow.flow.ps1" `
-        -BaseUrl $setup.baseUrl `
-        -InstallRoot $setup.installRoot `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion `
-        -NpmRegistryBaseUrl $npm.baseUrl `
-        -BucketRepoPath $setup.bucketRepoPath `
+        -NpmRegistryBaseUrl $npm.info.baseUrl `
+        -BucketRepoPath $s.setup.bucketRepoPath `
         -Phase update
     }
   } finally {
-    $staticServer | Remove-Job -Force -ErrorAction SilentlyContinue
-    $npmServer | Remove-Job -Force -ErrorAction SilentlyContinue
+    $static.job, $npm.job | Remove-Job -Force -ErrorAction SilentlyContinue
   }
 
-  Write-Host "==> skills-selection-user-workflow"
-  $scenarioRoot = "$tmpRoot\skills-selection"
-  $installRoot = "$scenarioRoot\installed"
-  $serverRoot = "$scenarioRoot\server"
-  $setupJson = "$scenarioRoot\setup.json"
-  $staticReady = "$scenarioRoot\static-ready.json"
-  $githubReady = "$scenarioRoot\github-ready.json"
-  $port = Get-FreePort
-  $baseUrl = "http://127.0.0.1:$port"
-  New-Item -ItemType Directory -Force -Path $scenarioRoot | Out-Null
-
-  & "$e2eRoot\skills-selection-user-workflow.setup.ps1" `
-    -RepoRoot $repoRoot `
-    -ServerRoot $serverRoot `
-    -InstallRoot $installRoot `
-    -BaseUrl $baseUrl `
-    -ExpectedReleaseTag "v$version" `
-    -BunExePath $bunExe `
-    -OutFile $setupJson
-
-  $setup = Read-Json $setupJson
-  $staticServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\static-file-server.ts --root $serverRoot --port $port --ready-file $staticReady
-  } &
-  $githubServer = & {
-    Set-Location $repoRoot
-    bun run .\tests\mocks\github-mock.ts --state $setup.githubStatePath --ready-file $githubReady
-  } &
-
-  Wait-File $staticReady
-  Wait-File $githubReady
+  $s = New-Scenario "skills-selection-user-workflow"
+  $static = Start-Mock "static-file-server" "$($s.root)\static-ready.json" @("--root", "$($s.root)\server", "--port", "$($s.port)")
+  $github = Start-Mock "github-mock" "$($s.root)\github-ready.json" @("--state", $s.setup.githubStatePath)
   try {
-    $github = Read-Json $githubReady
-    $envMap = @{}
-    foreach ($entry in $setup.env.GetEnumerator()) {
-      $envMap[$entry.Key] = $entry.Value
-    }
-    $envMap.FLGET_GITHUB_API_BASE_URL = $github.baseUrl
-
+    $envMap = $s.setup.env.Clone()
+    $envMap.FLGET_GITHUB_API_BASE_URL = $github.info.baseUrl
     Use-Env $envMap {
       & "$e2eRoot\skills-selection-user-workflow.flow.ps1" `
-        -BaseUrl $setup.baseUrl `
-        -InstallRoot $setup.installRoot `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion `
-        -GitHubApiBaseUrl $github.baseUrl
+        -GitHubApiBaseUrl $github.info.baseUrl
     }
   } finally {
-    $staticServer | Remove-Job -Force -ErrorAction SilentlyContinue
-    $githubServer | Remove-Job -Force -ErrorAction SilentlyContinue
+    $static.job, $github.job | Remove-Job -Force -ErrorAction SilentlyContinue
   }
 } finally {
   Remove-Item $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
