@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "bun build ./src/cli.ts --outdir ./dist --entry-naming flget.js --target bun --sourcemap=external --minify",
+    "build": "bun run scripts/build.ts",
     "start": "bun run ./src/cli.ts",
     "test": "bun test",
     "lint": "bunx @biomejs/biome lint ./src",
