@@ -1,4 +1,4 @@
-import type { InstallKind, InstallSource, SourceType } from "./source-family";
+import type { InstallSource, SourceType } from "./source-family";
 import type { SourceFamily } from "./source-family";
 import type { FundingInfo } from "./funding";
 

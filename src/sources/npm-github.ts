@@ -16,20 +16,9 @@ import type {
 } from "../core/types";
 import { findExactGitHubCatalog, searchGitHubCatalog } from "./catalog-helpers";
 import { resolveInstalledPackageJsonFunding } from "./funding-helpers";
-import {
-  dedupeShimDefs,
-  finalizePreparedPackage,
-  normalizeOverrideBins,
-  normalizeOverrideDaemonEntries,
-  normalizeOverrideEnvSet,
-  normalizeOverrideInteractiveEntries,
-  normalizeOverrideNotes,
-  normalizeOverridePersist,
-  normalizeOverrideWarnings,
-} from "./helpers";
+import { finalizePackageJsonPrepare } from "./helpers";
 import {
   installPackageJsonAppDependencies,
-  normalizePackageJsonBins,
   readPackageJsonApp,
   runPackageJsonBuild,
 } from "./package-json-app";
@@ -157,26 +146,6 @@ export const npmGithubSource: SourceResolver<"npm-github", NpmGitHubResolvedExtr
     await installPackageJsonAppDependencies(stagingDir, options.noScripts === true);
     await runPackageJsonBuild(stagingDir, packageJson, options.noScripts === true);
 
-    const overrideBin = normalizeOverrideBins(override?.bin);
-    const effectiveBin = overrideBin.length > 0 ? overrideBin : normalizePackageJsonBins(packageJson);
-    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
-    const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
-    const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
-    if (effectiveBin.length === 0) {
-      throw new Error(`No runnable bin entry found in package.json for ${owner}/${repo}`);
-    }
-
-    return finalizePreparedPackage(stagingDir, {
-      displayName: packageJson.name ?? resolved.displayName,
-      portability: override?.portability ?? "portable",
-      runtime: override?.runtime ?? "bun-native",
-      bin: effectiveBin,
-      interactiveEntries,
-      daemonEntries,
-      persist: normalizeOverridePersist(override),
-      envSet: normalizeOverrideEnvSet(override),
-      warnings: normalizeOverrideWarnings(override),
-      notes: normalizeOverrideNotes(override),
-    });
+    return finalizePackageJsonPrepare(stagingDir, packageJson, override, resolved, `${owner}/${repo}`);
   },
 };

@@ -26,7 +26,7 @@ import { runCommand } from "../utils/process";
 import { syncBucketIfNeeded } from "../commands/bucket";
 import { loadGitHubFundingInfo, loadScoopManifest } from "./funding-helpers";
 import { dedupeShimDefs, finalizePreparedPackage } from "./helpers";
-import { findExactScoopCatalog, getBucketManifestDir, searchScoopCatalog } from "./scoop-catalog";
+import { findExactScoopCatalog, searchScoopCatalog } from "./scoop-catalog";
 
 const IDENTIFIER = /^scoop:([^/]+)\/(.+)$/;
 

@@ -230,7 +230,7 @@ shims:
 
 ## 🧩 Compatibility Overrides
 
-- `flget` has compatibility overrides system and repository
+- Official compatibility overrides repository:
   - https://github.com/flatina/flget-compat
   - PRs welcome.
 

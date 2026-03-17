@@ -1,7 +1,7 @@
 import { inflateRawSync } from "node:zlib";
-import { dirname, extname, join, normalize, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import { mkdir, readdir, stat } from "node:fs/promises";
-import { copyPath, ensureDir, ensureRelativePathInsideRoot, moveContentsUp, pathExists, removePath, renameStrict } from "../utils/fs";
+import { copyPath, ensureDir, ensureRelativePathInsideRoot, moveContentsUp, pathExists, removePath, } from "../utils/fs";
 import { readRuntimeArrayBuffer, readRuntimeBytes, spawnProcess, writeRuntimeBytes } from "../utils/runtime";
 
 function b2(data: Uint8Array, offset: number): number {

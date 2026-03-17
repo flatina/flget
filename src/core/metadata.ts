@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { AppPackageMeta, PackageMeta, SkillPackageMeta } from "./types";
-import { pathExists, readJson, removePath, writeJson, writeText } from "../utils/fs";
+import { pathExists, readJson, removePath, withFileLock, writeJson, writeText } from "../utils/fs";
 import { getDirs, PACKAGE_META_NAME } from "./dirs";
 import { getMetaSearchRoots, getPackageBaseRelativePath } from "./package-layout";
 import { inferPackageLocationFromRelativeParts } from "./source-family";
@@ -169,24 +169,26 @@ export async function loadPackageMeta(root: string, id: string): Promise<Package
 
 export async function savePackageMeta(root: string, meta: PackageMeta): Promise<void> {
   const target = getPackageMetaPath(root, meta);
-  const stored: StoredPackageMeta = {
-    displayName: meta.displayName,
-    sourceRef: meta.sourceRef,
-    resolvedVersion: meta.resolvedVersion,
-    resolvedRef: meta.resolvedRef,
-    portability: meta.portability,
-    runtime: meta.runtime,
-    bin: meta.bin,
-    interactiveEntries: meta.interactiveEntries,
-    daemonEntries: meta.daemonEntries,
-    persist: meta.persist,
-    envAddPath: meta.envAddPath,
-    envSet: meta.envSet,
-    warnings: meta.warnings,
-    notes: meta.notes ?? null,
-    skill: meta.installKind === "skill" ? meta.skill : undefined,
-  };
-  await writeJson(target, stored);
+  await withFileLock(target, async () => {
+    const stored: StoredPackageMeta = {
+      displayName: meta.displayName,
+      sourceRef: meta.sourceRef,
+      resolvedVersion: meta.resolvedVersion,
+      resolvedRef: meta.resolvedRef,
+      portability: meta.portability,
+      runtime: meta.runtime,
+      bin: meta.bin,
+      interactiveEntries: meta.interactiveEntries,
+      daemonEntries: meta.daemonEntries,
+      persist: meta.persist,
+      envAddPath: meta.envAddPath,
+      envSet: meta.envSet,
+      warnings: meta.warnings,
+      notes: meta.notes ?? null,
+      skill: meta.installKind === "skill" ? meta.skill : undefined,
+    };
+    await writeJson(target, stored);
+  });
 }
 
 export async function setPackageWinner(root: string, meta: Pick<PackageMeta, "sourceType" | "id">): Promise<void> {

@@ -132,10 +132,16 @@ async function syncOneRegistry(context: RuntimeContext, scope: "official" | "com
 }
 
 export async function syncRegistries(context: RuntimeContext): Promise<void> {
-  for (const url of context.config.compatRegistries.official) {
-    await syncOneRegistry(context, "official", url);
+  const errors: string[] = [];
+  for (const url of [...context.config.compatRegistries.official, ...context.config.compatRegistries.community]) {
+    const scope = context.config.compatRegistries.official.includes(url) ? "official" : "community";
+    try {
+      await syncOneRegistry(context, scope, url);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
   }
-  for (const url of context.config.compatRegistries.community) {
-    await syncOneRegistry(context, "community", url);
+  if (errors.length > 0) {
+    throw new Error(`Compat source sync failed:\n${errors.join("\n")}`);
   }
 }

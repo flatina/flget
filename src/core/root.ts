@@ -1,5 +1,5 @@
 import { getDefaultConfig, writeConfig } from "./config";
-import { ensureLayout, getDirs, ROOT_CONFIG_NAME } from "./dirs";
+import { ensureLayout, ROOT_CONFIG_NAME } from "./dirs";
 import { regenerateEnvScripts } from "./env-script";
 import { ensureStaticRootShims, regenerateRootShims } from "./shim";
 import { pathExists } from "../utils/fs";

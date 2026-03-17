@@ -201,7 +201,12 @@ At minimum, add:
 
 Recommended placement:
 
-- `tests/e2e/glr.test.ts`
+- `tests/e2e/glr-user-workflow.setup.ps1`
+- `tests/e2e/glr-user-workflow.flow.ps1`
+
+Run with:
+
+- `bun run test:e2e`
 
 Use local mocks, not real network calls.
 

@@ -8,11 +8,13 @@
     "build": "bun build ./src/cli.ts --outdir ./dist --entry-naming flget.js --target bun --sourcemap=external --minify",
     "start": "bun run ./src/cli.ts",
     "test": "bun test",
+    "lint": "bunx @biomejs/biome lint ./src",
     "test:e2e": "pwsh -NoProfile -File ./tests/test-e2e.ps1",
     "test:deployed-all": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-deployed-all.ps1"
   },
   "dependencies": {},
   "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
     "@types/bun": "^1.3.3",
     "typescript": "^5.9.2"
   }
