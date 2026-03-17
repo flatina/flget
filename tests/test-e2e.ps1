@@ -1,5 +1,4 @@
-param()
-
+#Requires -Version 7.0
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 $ProgressPreference = "SilentlyContinue"

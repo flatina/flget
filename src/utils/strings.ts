@@ -1,6 +1,23 @@
 import { basename, extname } from "node:path";
 import type { ShimDef, ShimRunner } from "../core/types";
 
+const EXTENSION_MAP: Record<string, { type: ShimDef["type"]; runner: ShimRunner }> = {
+  ".exe": { type: "exe", runner: "direct" },
+  ".com": { type: "exe", runner: "direct" },
+  ".cmd": { type: "cmd", runner: "cmd" },
+  ".bat": { type: "cmd", runner: "cmd" },
+  ".ps1": { type: "ps1", runner: "powershell" },
+  ".jar": { type: "jar", runner: "java" },
+  ".py":  { type: "py",  runner: "python" },
+  ".js":  { type: "js",  runner: "bun" },
+  ".cjs": { type: "js",  runner: "bun" },
+  ".mjs": { type: "js",  runner: "bun" },
+  ".ts":  { type: "ts",  runner: "bun" },
+  ".cts": { type: "ts",  runner: "bun" },
+  ".mts": { type: "ts",  runner: "bun" },
+  ".sh":  { type: "other", runner: "bash" },
+};
+
 export function slugify(value: string): string {
   return value
     .trim()
@@ -16,60 +33,11 @@ export function wildcardToRegExp(pattern: string): RegExp {
 }
 
 export function detectShimType(target: string): ShimDef["type"] {
-  const extension = extname(target).toLowerCase();
-  switch (extension) {
-    case ".exe":
-    case ".com":
-      return "exe";
-    case ".cmd":
-    case ".bat":
-      return "cmd";
-    case ".ps1":
-      return "ps1";
-    case ".jar":
-      return "jar";
-    case ".py":
-      return "py";
-    case ".js":
-    case ".cjs":
-    case ".mjs":
-      return "js";
-    case ".ts":
-    case ".cts":
-    case ".mts":
-      return "ts";
-    default:
-      return "other";
-  }
+  return EXTENSION_MAP[extname(target).toLowerCase()]?.type ?? "other";
 }
 
 export function inferShimRunner(target: string): ShimRunner | undefined {
-  const extension = extname(target).toLowerCase();
-  switch (extension) {
-    case ".exe":
-    case ".com":
-      return "direct";
-    case ".cmd":
-    case ".bat":
-      return "cmd";
-    case ".ps1":
-      return "powershell";
-    case ".jar":
-      return "java";
-    case ".py":
-      return "python";
-    case ".js":
-    case ".cjs":
-    case ".mjs":
-    case ".ts":
-    case ".cts":
-    case ".mts":
-      return "bun";
-    case ".sh":
-      return "bash";
-    default:
-      return undefined;
-  }
+  return EXTENSION_MAP[extname(target).toLowerCase()]?.runner;
 }
 
 export function deriveShimName(target: string): string {

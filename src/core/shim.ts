@@ -84,33 +84,19 @@ function renderPowerShellBunRunner(target: string, args: string): string {
   );
 }
 
+const TYPE_TO_RUNNER: Record<ShimDef["type"], ShimRunner> = {
+  exe: "direct",
+  cmd: "cmd",
+  ps1: "powershell",
+  jar: "java",
+  py: "python",
+  js: "bun",
+  ts: "bun",
+  other: "direct",
+};
+
 function resolveShimRunner(shim: ShimDef): ShimRunner {
-  if (shim.runner) {
-    return shim.runner;
-  }
-
-  const inferred = inferShimRunner(shim.target);
-  if (inferred) {
-    return inferred;
-  }
-
-  switch (shim.type) {
-    case "cmd":
-      return "cmd";
-    case "ps1":
-      return "powershell";
-    case "jar":
-      return "java";
-    case "py":
-      return "python";
-    case "js":
-    case "ts":
-      return "bun";
-    case "exe":
-    case "other":
-    default:
-      return "direct";
-  }
+  return shim.runner ?? inferShimRunner(shim.target) ?? TYPE_TO_RUNNER[shim.type];
 }
 
 function getCmdShimTarget(id: string, sourceType: PackageMeta["sourceType"], shim: ShimDef): string {

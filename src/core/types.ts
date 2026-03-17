@@ -1,8 +1,8 @@
-import type { InstallSource, SourceType } from "./source-family";
+import type { InstallSource, SourceDirsKey, SourceType } from "./source-family";
 import type { SourceFamily } from "./source-family";
 import type { FundingInfo } from "./funding";
 
-export type { InstallKind, InstallSource, SourceType } from "./source-family";
+export type { InstallKind, InstallSource, SourceDirsKey, SourceType } from "./source-family";
 export type Portability = "portable" | "host-integrated" | "unverified";
 export type RuntimeKind = "standalone" | "bun-native" | "runtime-dependent" | "unverified";
 export type Arch = "64bit" | "32bit" | "arm64";
@@ -43,13 +43,7 @@ export interface FlgetConfig {
   useLocalOverrides: boolean;
 }
 
-export interface SourceEnablementConfig {
-  scoop: boolean;
-  npm: boolean;
-  ghr: boolean;
-  npmgh: boolean;
-  skill: boolean;
-}
+export type SourceEnablementConfig = Record<InstallSource, boolean>;
 
 export interface BucketConfig {
   name: string;
@@ -60,14 +54,9 @@ export interface RootConfig {
   path: string;
 }
 
-export interface FlgetDirs {
+export interface FlgetDirs extends Record<SourceDirsKey, string> {
   root: string;
-  scoop: string;
-  npm: string;
-  ghr: string;
-  npmgh: string;
   agents: string;
-  skills: string;
   buckets: string;
   shims: string;
   temp: string;
