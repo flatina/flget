@@ -1,4 +1,4 @@
-import { join } from "node:path";
+
 import { getCurrentPath } from "./helpers";
 import { regenerateEnvScripts } from "../core/env-script";
 import { loadPackageMeta } from "../core/metadata";

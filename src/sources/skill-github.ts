@@ -311,7 +311,7 @@ export async function discoverSkillsInRepo(
   }
 
   const resolvedRef = requestedRef ?? (await getDefaultBranchHead(context, owner, repo)).sha;
-  const tempRepoDir = join(context.dirs.temp, `skill-discovery-${repo}-${Date.now()}`);
+  const tempRepoDir = join(context.dirs.temp, `skill-discovery-${repo}-${crypto.randomUUID()}`);
 
   try {
     const tarball = await downloadToStore(context, getTarballUrl(owner, repo, resolvedRef), {

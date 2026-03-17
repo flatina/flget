@@ -34,7 +34,7 @@ function escapePowerShellSingleQuotedString(value: string): string {
 }
 
 async function createFallbackUpdateLauncher(root: string, tempDir: string, baseUrl: string): Promise<string> {
-  const launcherDir = join(tempDir, `self-update-launcher-${Date.now()}`);
+  const launcherDir = join(tempDir, `self-update-launcher-${crypto.randomUUID()}`);
   await ensureDir(launcherDir);
   const launcherPath = join(launcherDir, "launch-update.ps1");
   const escapedRoot = escapePowerShellSingleQuotedString(root);
@@ -114,7 +114,7 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
     return;
   }
 
-  const stagingDir = join(context.dirs.temp, `${resolved.id}-${Date.now()}`);
+  const stagingDir = join(context.dirs.temp, `${resolved.id}-${crypto.randomUUID()}`);
   const packageBase = getPackageBaseDir(context, existing.id, existing.sourceType);
   const currentPath = getCurrentPath(context, existing.id, existing.sourceType);
   const previousVersionPath = await getUniqueVersionPath(packageBase, existing.resolvedVersion);

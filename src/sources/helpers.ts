@@ -3,6 +3,8 @@ import { readdir } from "node:fs/promises";
 import type { DaemonEntry, PersistDef, PreparedPackage, RegistryOverride, RuntimeKind, ShimDef } from "../core/types";
 import { ensureRelativePathInsideRoot } from "../utils/fs";
 import { detectShimType, deriveShimName, inferShimRunner, wildcardToRegExp } from "../utils/strings";
+import type { PackageJsonAppManifest } from "./package-json-app";
+import { normalizePackageJsonBins } from "./package-json-app";
 
 function normalizeShimOverride(
   item: Partial<ShimDef> | undefined,
@@ -235,6 +237,35 @@ export function chooseBestBinCandidate(repoName: string, candidates: string[]): 
     target: winner.candidate,
     type: winner.type,
   }];
+}
+
+export function finalizePackageJsonPrepare(
+  stagingDir: string,
+  packageJson: PackageJsonAppManifest,
+  override: RegistryOverride | null,
+  resolved: { displayName: string },
+  label: string,
+): PreparedPackage {
+  const overrideBin = normalizeOverrideBins(override?.bin);
+  const effectiveBin = overrideBin.length > 0 ? overrideBin : normalizePackageJsonBins(packageJson);
+  const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
+  const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
+  const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
+  if (effectiveBin.length === 0) {
+    throw new Error(`No runnable bin entry found in package.json for ${label}`);
+  }
+  return finalizePreparedPackage(stagingDir, {
+    displayName: packageJson.name ?? resolved.displayName,
+    portability: override?.portability ?? "portable",
+    runtime: override?.runtime ?? "bun-native",
+    bin: effectiveBin,
+    interactiveEntries,
+    daemonEntries,
+    persist: normalizeOverridePersist(override),
+    envSet: normalizeOverrideEnvSet(override),
+    warnings: normalizeOverrideWarnings(override),
+    notes: normalizeOverrideNotes(override),
+  });
 }
 
 export function inferRuntimeFromBins(bin: ShimDef[], fallback: RuntimeKind = "unverified"): RuntimeKind {

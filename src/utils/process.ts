@@ -3,6 +3,7 @@ import { spawnProcess } from "./runtime";
 export interface RunCommandOptions {
   cwd?: string;
   env?: Record<string, string>;
+  timeout?: number;
 }
 
 function currentEnv(): Record<string, string> {
@@ -35,13 +36,25 @@ export async function runCommand(cmd: string[], options: RunCommandOptions = {})
     spawnOptions.cwd = options.cwd;
   }
 
-  const process = spawnProcess(spawnOptions);
+  const proc = spawnProcess(spawnOptions);
+
+  let timedOut = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  if (options.timeout) {
+    timer = setTimeout(() => { timedOut = true; proc.kill(); }, options.timeout);
+  }
 
   const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(process.stdout).text(),
-    new Response(process.stderr).text(),
-    process.exited,
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
   ]);
+
+  if (timer) clearTimeout(timer);
+
+  if (timedOut) {
+    throw new Error(`Command timed out after ${options.timeout}ms: ${cmd[0]}`);
+  }
 
   if (exitCode !== 0) {
     throw new Error(`${cmd.join(" ")} failed (${exitCode}): ${stderr.trim() || stdout.trim() || "unknown error"}`);

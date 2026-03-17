@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile, copyFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, stat, unlink, writeFile, copyFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 
 export async function pathExists(target: string): Promise<boolean> {
@@ -92,4 +92,27 @@ export async function moveContentsUp(fromDir: string, toDir: string): Promise<vo
 
 export function formatJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+export async function withFileLock<T>(lockTarget: string, fn: () => Promise<T>): Promise<T> {
+  const lockFile = `${lockTarget}.lock`;
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      handle = await open(lockFile, "wx");
+      break;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+  if (!handle) {
+    throw new Error(`Unable to acquire lock: ${lockFile}`);
+  }
+  try {
+    return await fn();
+  } finally {
+    await handle.close();
+    await unlink(lockFile).catch(() => {});
+  }
 }
