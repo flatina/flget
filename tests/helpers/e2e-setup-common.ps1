@@ -49,7 +49,7 @@ function New-TarGzArchive {
 
   Push-Location $StageRoot
   try {
-    & tar -czf $ArchivePath *
+    & "$env:SystemRoot\System32\tar.exe" -czf $ArchivePath *
     if ($LASTEXITCODE -ne 0) {
       throw "tar failed for $ArchivePath"
     }
