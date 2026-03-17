@@ -178,13 +178,14 @@ export async function savePackageMeta(root: string, meta: PackageMeta): Promise<
       portability: meta.portability,
       runtime: meta.runtime,
       bin: meta.bin,
-      interactiveEntries: meta.interactiveEntries,
+      uiEntries: meta.uiEntries,
       daemonEntries: meta.daemonEntries,
       persist: meta.persist,
       envAddPath: meta.envAddPath,
       envSet: meta.envSet,
       warnings: meta.warnings,
       notes: meta.notes ?? null,
+      tags: meta.tags?.length ? meta.tags : undefined,
       skill: meta.installKind === "skill" ? meta.skill : undefined,
     };
     await writeJson(target, stored);

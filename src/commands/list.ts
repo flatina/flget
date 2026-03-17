@@ -1,24 +1,30 @@
 import { listPackageMetas } from "../core/metadata";
 import { pad } from "../utils/strings";
 
-export async function runListCommand(root: string, asJson: boolean): Promise<void> {
-  const packages = await listPackageMetas(root);
+export async function runListCommand(root: string, asJson: boolean, filterTag?: string): Promise<void> {
+  let packages = await listPackageMetas(root);
+  if (filterTag) {
+    packages = packages.filter((meta) => meta.tags?.includes(filterTag));
+  }
+
   if (asJson) {
     console.log(JSON.stringify(packages, null, 2));
     return;
   }
 
   if (packages.length === 0) {
-    console.log("No packages installed.");
+    console.log(filterTag ? `No packages found with tag "${filterTag}".` : "No packages installed.");
     return;
   }
 
-  const headers = ["Package", "Version", "Source", "Portability"];
+  const showTags = packages.some((meta) => meta.tags?.length);
+  const headers = ["Package", "Version", "Source", "Portability", ...(showTags ? ["Tags"] : [])];
   const rows = packages.map((meta) => [
     meta.id,
     meta.resolvedVersion,
     meta.sourceType,
     meta.portability,
+    ...(showTags ? [meta.tags?.join(", ") ?? ""] : []),
   ]);
   const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index]!.length)));
 

@@ -196,6 +196,9 @@ export async function runInstallCommand(context: RuntimeContext, identifier: str
     await renameStrict(stagingDir, targetCurrent);
 
     const meta = buildPackageMeta(resolved, prepared);
+    if (options.tags?.length) {
+      meta.tags = options.tags;
+    }
     await setTransactionPhase(context.root, resolved.id, "shimming");
     await savePackageMeta(context.root, meta);
     await setPackageWinner(context.root, meta);

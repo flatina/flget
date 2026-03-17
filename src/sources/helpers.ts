@@ -32,7 +32,7 @@ export function normalizeOverrideBins(bins: RegistryOverride["bin"]): ShimDef[] 
   });
 }
 
-export function normalizeOverrideInteractiveEntries(entries: RegistryOverride["interactive"]): ShimDef[] {
+export function normalizeOverrideUiEntries(entries: RegistryOverride["ui"]): ShimDef[] {
   if (!entries) {
     return [];
   }
@@ -165,7 +165,7 @@ export function finalizePreparedPackage(stagingDir: string, prepared: PreparedPa
   return {
     ...prepared,
     bin: validateShimDefs(stagingDir, prepared.bin),
-    interactiveEntries: prepared.interactiveEntries ? validateShimDefs(stagingDir, prepared.interactiveEntries) : undefined,
+    uiEntries: prepared.uiEntries ? validateShimDefs(stagingDir, prepared.uiEntries) : undefined,
     daemonEntries: prepared.daemonEntries ? validateDaemonEntries(stagingDir, prepared.daemonEntries) : undefined,
     persist: validatePersistDefs(stagingDir, prepared.persist),
     envAddPath: prepared.envAddPath?.map((entry) => normalizeRelativeEntryPath(stagingDir, entry)),
@@ -248,8 +248,8 @@ export function finalizePackageJsonPrepare(
 ): PreparedPackage {
   const overrideBin = normalizeOverrideBins(override?.bin);
   const effectiveBin = overrideBin.length > 0 ? overrideBin : normalizePackageJsonBins(packageJson);
-  const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
-  const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
+  const overrideUiEntries = normalizeOverrideUiEntries(override?.ui);
+  const uiEntries = dedupeShimDefs(overrideUiEntries.length > 0 ? overrideUiEntries : effectiveBin);
   const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
   if (effectiveBin.length === 0) {
     throw new Error(`No runnable bin entry found in package.json for ${label}`);
@@ -259,7 +259,7 @@ export function finalizePackageJsonPrepare(
     portability: override?.portability ?? "portable",
     runtime: override?.runtime ?? "bun-native",
     bin: effectiveBin,
-    interactiveEntries,
+    uiEntries,
     daemonEntries,
     persist: normalizeOverridePersist(override),
     envSet: normalizeOverrideEnvSet(override),

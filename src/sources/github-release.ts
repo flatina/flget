@@ -30,7 +30,7 @@ import {
   normalizeOverrideBins,
   normalizeOverrideDaemonEntries,
   normalizeOverrideEnvSet,
-  normalizeOverrideInteractiveEntries,
+  normalizeOverrideUiEntries,
   normalizeOverrideNotes,
   normalizeOverridePersist,
   normalizeOverrideWarnings,
@@ -207,8 +207,8 @@ export const githubReleaseSource: SourceResolver<"github-release", GitHubRelease
 
     const overrideBin = normalizeOverrideBins(override?.bin);
     const effectiveBin = overrideBin.length > 0 ? overrideBin : chooseBestBinCandidate(repo, await collectExecutableCandidates(stagingDir));
-    const overrideInteractiveEntries = normalizeOverrideInteractiveEntries(override?.interactive);
-    const interactiveEntries = dedupeShimDefs(overrideInteractiveEntries.length > 0 ? overrideInteractiveEntries : effectiveBin);
+    const overrideUiEntries = normalizeOverrideUiEntries(override?.ui);
+    const uiEntries = dedupeShimDefs(overrideUiEntries.length > 0 ? overrideUiEntries : effectiveBin);
     const daemonEntries = normalizeOverrideDaemonEntries(override?.daemon);
     if (effectiveBin.length === 0) {
       throw new Error(`Unable to infer executable for ${owner}/${repo}; add a compatibility override.`);
@@ -218,7 +218,7 @@ export const githubReleaseSource: SourceResolver<"github-release", GitHubRelease
       portability: override?.portability ?? (asset.name.toLowerCase().endsWith(".exe") ? "portable" : "unverified"),
       runtime: override?.runtime ?? inferRuntimeFromBins(effectiveBin),
       bin: effectiveBin,
-      interactiveEntries,
+      uiEntries,
       daemonEntries,
       persist: normalizeOverridePersist(override),
       envSet: normalizeOverrideEnvSet(override),

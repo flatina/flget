@@ -361,13 +361,13 @@ export const scoopSource: SourceResolver<"scoop", ScoopResolvedExtra> = {
       Object.entries(manifest.env_set ?? {}).map(([key, value]) => [key, substituteVariables(value, variables)]),
     );
     const bin = normalizeBins(manifest.bin);
-    const interactiveEntries = dedupeShimDefs([...bin, ...shortcutEntries]);
+    const uiEntries = shortcutEntries.length > 0 ? dedupeShimDefs(shortcutEntries) : undefined;
 
     return finalizePreparedPackage(stagingDir, {
       portability: detectPortability(manifest),
       runtime: detectRuntime(bin),
       bin,
-      interactiveEntries,
+      uiEntries,
       daemonEntries: [],
       persist: normalizePersistEntries(manifest.persist),
       envAddPath: ensureArray(manifest.env_add_path),
