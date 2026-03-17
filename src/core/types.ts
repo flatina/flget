@@ -62,10 +62,10 @@ export interface FlgetDirs extends Record<SourceDirsKey, string> {
   temp: string;
   downloads: string;
   transactions: string;
-  registriesMeta: string;
-  localRegistries: string;
-  officialRegistries: string;
-  communityRegistries: string;
+  compat: string;
+  compatLocal: string;
+  compatOfficial: string;
+  compatCommunity: string;
   bunExe: string;
   cliJs: string;
   cliMap: string;

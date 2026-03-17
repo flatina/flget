@@ -24,23 +24,23 @@ async function findOverrideCandidates(root: string, sourceType: SourceType, file
 
   locations.push({
     scope: "local",
-    path: join(dirs.localRegistries, "overrides", sourceType, fileName),
+    path: join(dirs.compatLocal, "overrides", sourceType, fileName),
   });
 
-  if (await pathExists(dirs.officialRegistries)) {
-    for (const entry of await scanGlob("*", dirs.officialRegistries)) {
+  if (await pathExists(dirs.compatOfficial)) {
+    for (const entry of await scanGlob("*", dirs.compatOfficial)) {
       locations.push({
         scope: "official",
-        path: join(dirs.officialRegistries, entry, "overrides", sourceType, fileName),
+        path: join(dirs.compatOfficial, entry, "overrides", sourceType, fileName),
       });
     }
   }
 
-  if (await pathExists(dirs.communityRegistries)) {
-    for (const entry of await scanGlob("*", dirs.communityRegistries)) {
+  if (await pathExists(dirs.compatCommunity)) {
+    for (const entry of await scanGlob("*", dirs.compatCommunity)) {
       locations.push({
         scope: "community",
-        path: join(dirs.communityRegistries, entry, "overrides", sourceType, fileName),
+        path: join(dirs.compatCommunity, entry, "overrides", sourceType, fileName),
       });
     }
   }
@@ -104,7 +104,7 @@ async function commandExists(command: string): Promise<boolean> {
 }
 
 function getRegistryDir(context: RuntimeContext, scope: "official" | "community", url: string): string {
-  const bucket = scope === "official" ? context.dirs.officialRegistries : context.dirs.communityRegistries;
+  const bucket = scope === "official" ? context.dirs.compatOfficial : context.dirs.compatCommunity;
   return join(bucket, slugify(url.replace(/^https?:\/\//i, "").replace(/\.git$/i, "")));
 }
 
@@ -116,7 +116,7 @@ async function syncOneRegistry(context: RuntimeContext, scope: "official" | "com
   const target = getRegistryDir(context, scope, url);
   const exists = await pathExists(target);
   if (!exists) {
-    const bucket = scope === "official" ? context.dirs.officialRegistries : context.dirs.communityRegistries;
+    const bucket = scope === "official" ? context.dirs.compatOfficial : context.dirs.compatCommunity;
     await ensureDir(bucket);
   }
   const cmd = exists
