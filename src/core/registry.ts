@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { FlgetConfig, RegistryOverride, RuntimeContext, SourceType } from "./types";
-import { pathExists } from "../utils/fs";
+import { ensureDir, pathExists } from "../utils/fs";
 import { getDirs } from "./dirs";
 import { parseToml, readRuntimeText, scanGlob, spawnProcess } from "../utils/runtime";
 import { slugify } from "../utils/strings";
@@ -115,6 +115,10 @@ async function syncOneRegistry(context: RuntimeContext, scope: "official" | "com
 
   const target = getRegistryDir(context, scope, url);
   const exists = await pathExists(target);
+  if (!exists) {
+    const bucket = scope === "official" ? context.dirs.officialRegistries : context.dirs.communityRegistries;
+    await ensureDir(bucket);
+  }
   const cmd = exists
     ? ["git", "-C", target, "pull", "--ff-only"]
     : ["git", "clone", "--depth", "1", url, target];
