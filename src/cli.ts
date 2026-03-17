@@ -34,7 +34,7 @@ Usage:
   flget skills <find|install|list|info|update|remove> ...
   flget env
   flget repair [package]
-  flget root <add|remove|list|first|last> ...
+  flget offline-root <add|remove|list|first|last> ...
   flget bucket <add|remove|list|update> ...
   flget compat <list|add|remove|update> ...
 
@@ -159,7 +159,7 @@ const COMMANDS: CommandSpec[] = [
     },
   }),
   defineRuntimeCommand({
-    name: "root",
+    name: "offline-root",
     contextMode: "create",
     async run(parsed, _installOptions, context) {
       await runRootCommand(context, parsed.positional);

@@ -33,7 +33,7 @@ export async function runRootCommand(context: RuntimeContext, args: string[]): P
     case "add": {
       const [path] = rest;
       if (!path) {
-        throw new Error("Usage: flget root add <path>");
+        throw new Error("Usage: flget offline-root add <path>");
       }
       await assertRootExists(path);
       const normalized = normalizeRootPath(path);
@@ -48,7 +48,7 @@ export async function runRootCommand(context: RuntimeContext, args: string[]): P
     case "remove": {
       const [path] = rest;
       if (!path) {
-        throw new Error("Usage: flget root remove <path>");
+        throw new Error("Usage: flget offline-root remove <path>");
       }
       const index = findRootIndex(config.roots, path);
       if (index < 0) {
@@ -62,7 +62,7 @@ export async function runRootCommand(context: RuntimeContext, args: string[]): P
     case "first": {
       const [path] = rest;
       if (!path) {
-        throw new Error("Usage: flget root first <path>");
+        throw new Error("Usage: flget offline-root first <path>");
       }
       const index = findRootIndex(config.roots, path);
       if (index < 0) {
@@ -77,7 +77,7 @@ export async function runRootCommand(context: RuntimeContext, args: string[]): P
     case "last": {
       const [path] = rest;
       if (!path) {
-        throw new Error("Usage: flget root last <path>");
+        throw new Error("Usage: flget offline-root last <path>");
       }
       const index = findRootIndex(config.roots, path);
       if (index < 0) {
@@ -90,6 +90,6 @@ export async function runRootCommand(context: RuntimeContext, args: string[]): P
       return;
     }
     default:
-      throw new Error("Usage: flget root <add|remove|list|first|last> ...");
+      throw new Error("Usage: flget offline-root <add|remove|list|first|last> ...");
   }
 }

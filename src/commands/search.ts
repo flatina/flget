@@ -5,7 +5,7 @@ import type { AnySourceResolver, InstallSource, PackageMeta, RuntimeContext } fr
 import { pathExists } from "../utils/fs";
 import { listResolvers } from "../sources";
 
-export type SearchScope = InstallSource | "root" | null;
+export type SearchScope = InstallSource | "offline-root" | null;
 
 export interface SearchMatch {
   source: Exclude<SearchScope, null>;
@@ -22,7 +22,7 @@ export function parseSearchQuery(queryInput: string): { scope: SearchScope; quer
   const trimmed = queryInput.trim();
   const prefixes: Array<Exclude<SearchScope, null>> = [
     ...SOURCE_FAMILIES.map((family) => family.cliSource),
-    "root",
+    "offline-root",
   ];
   for (const prefix of prefixes) {
     if (trimmed.toLowerCase().startsWith(`${prefix}:`)) {
@@ -82,7 +82,7 @@ async function searchRoots(context: RuntimeContext, query: string): Promise<Sear
       const source = getSourceFamilyByType(meta.sourceType).cliSource;
       results.push({
         score,
-        source: "root",
+        source: "offline-root",
         identifier: meta.sourceRef,
         line: `${source}:${meta.sourceRef.replace(/^[^:]+:/, "")} -> ${rootEntry.path}`,
         installable: false,
@@ -121,7 +121,7 @@ function shouldIncludeResolver(
   options?: { includeSkills?: boolean },
 ): boolean {
   if (scope !== null) {
-    return scope !== "root" && resolver.family.cliSource === scope;
+    return scope !== "offline-root" && resolver.family.cliSource === scope;
   }
   if (resolver.family.cliSource === "skill") {
     return options?.includeSkills === true;
@@ -168,12 +168,12 @@ export async function findSearchMatches(
   if (queryInput.includes(":") && query === "") {
     throw new Error("Usage: flget search <query>");
   }
-  if (scope && scope !== "root") {
+  if (scope && scope !== "offline-root") {
     assertSourceEnabled(context.config, scope);
   }
 
   const matches = await collectSourceMatches(context, scope, query, options ?? {}, "search");
-  if ((scope === null && options?.includeRoots) || scope === "root") {
+  if ((scope === null && options?.includeRoots) || scope === "offline-root") {
     matches.push(...await searchRoots(context, query));
   }
   return dedupeMatches(matches);
@@ -188,7 +188,7 @@ export async function findExactInstallMatches(
   if (queryInput.includes(":") && query === "") {
     throw new Error("Usage: flget search <query>");
   }
-  if (scope && scope !== "root") {
+  if (scope && scope !== "offline-root") {
     assertSourceEnabled(context.config, scope);
   }
 
