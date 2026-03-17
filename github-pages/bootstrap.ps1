@@ -1,11 +1,11 @@
 #Requires -Version 5.1
-[CmdletBinding()]
 param(
   [string]$BaseUrl = "https://flatina.github.io/flget"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 
 $normalizedBaseUrl = $BaseUrl.TrimEnd("/")
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("flget-bootstrap-" + [guid]::NewGuid().ToString("N"))

@@ -1,0 +1,7 @@
+{
+  "name": "mock-npmgh-cli",
+  "version": "1.0.0",
+  "bin": {
+    "mock-npmgh": "bin/mock-npm.js"
+  }
+}

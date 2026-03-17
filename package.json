@@ -8,7 +8,7 @@
     "build": "bun build ./src/cli.ts --outdir ./dist --entry-naming flget.js --target bun --sourcemap=external --minify",
     "start": "bun run ./src/cli.ts",
     "test": "bun test",
-    "test:e2e": "bun test ./tests/e2e",
+    "test:e2e": "pwsh -NoProfile -File ./tests/test-e2e.ps1",
     "test:deployed-all": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-deployed-all.ps1"
   },
   "dependencies": {},

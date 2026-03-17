@@ -1,5 +1,4 @@
 #Requires -Version 5.1
-[CmdletBinding()]
 param(
   [string]$BaseUrl = "https://flatina.github.io/flget",
   [string]$RootPath,
@@ -9,6 +8,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 
 function Write-Step {
   param([string]$Message)
@@ -22,11 +22,20 @@ function Ensure-Directory {
   }
 }
 
-function Get-BunAssetName {
+function Get-ReleaseArchiveName {
   $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
   switch ($arch.ToString()) {
     "Arm64" { return "flget-win-arm64.zip" }
     "X64" { return "flget-win-x64.zip" }
+    default { throw "Unsupported Windows architecture: $arch" }
+  }
+}
+
+function Get-BunAssetName {
+  $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+  switch ($arch.ToString()) {
+    "Arm64" { return "bun-windows-aarch64.zip" }
+    "X64" { return "bun-windows-x64.zip" }
     default { throw "Unsupported Windows architecture: $arch" }
   }
 }
@@ -50,6 +59,13 @@ function Get-ReleaseRepo {
     return $env:FLGET_RELEASE_REPO
   }
   return "flget"
+}
+
+function Get-BunDownloadBaseUrl {
+  if ($env:FLGET_BUN_DOWNLOAD_BASE_URL) {
+    return $env:FLGET_BUN_DOWNLOAD_BASE_URL.TrimEnd("/")
+  }
+  return "https://github.com/oven-sh/bun/releases/latest/download"
 }
 
 function Get-ReleaseHeaders {
@@ -115,7 +131,7 @@ function Get-RequiredReleaseAssetUrl {
   $assetUrl = Get-ReleaseAssetUrl -Release $Release -Name $Name
   if (-not $assetUrl) {
     $releaseLabel = if ($Release -and $Release.tag_name) { $Release.tag_name } else { "requested release" }
-    throw "Required release asset not found in $releaseLabel: $Name"
+    throw "Required release asset not found in ${releaseLabel}: $Name"
   }
   return $assetUrl
 }
@@ -126,6 +142,21 @@ function Download-File {
     [string]$OutFile
   )
   Invoke-WebRequest -Uri $Url -OutFile $OutFile
+}
+
+function Expand-BunRuntime {
+  param(
+    [string]$ArchivePath,
+    [string]$DestinationPath
+  )
+
+  $extractRoot = Join-Path $DestinationPath "bun-runtime"
+  Expand-Archive -LiteralPath $ArchivePath -DestinationPath $extractRoot -Force
+  $bunExe = Get-ChildItem -Path $extractRoot -Filter "bun.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+  if (-not $bunExe) {
+    throw "bun.exe not found in downloaded Bun archive"
+  }
+  Copy-Item -LiteralPath $bunExe -Destination (Join-Path $DestinationPath "bun.exe") -Force
 }
 
 function Invoke-WithRetry {
@@ -210,7 +241,7 @@ if (-not $ApplyDownloadedUpdate) {
 $sessionDir = Join-Path $resolvedRoot ("tmp\\self-update\\session-" + [guid]::NewGuid().ToString("N"))
 $newDir = Join-Path $sessionDir "new"
 $oldDir = Join-Path $sessionDir "old"
-$archiveExtract = Join-Path $sessionDir "archive"
+$archiveExtract = Join-Path $sessionDir "runtime"
 $cleanupSession = $true
 
 Ensure-Directory $newDir
@@ -232,13 +263,21 @@ try {
   Write-Step "Preparing staged root update under $sessionDir"
   $release = Get-ReleaseMetadata -Tag $ReleaseTag
   $releaseLabel = if ($release.tag_name) { $release.tag_name } else { "latest release" }
-  Write-Step "Using runtime assets from $releaseLabel"
+  Write-Step "Using flget runtime assets from $releaseLabel"
 
   $runtimeArchive = Join-Path $sessionDir "flget-runtime.zip"
-  Download-File -Url (Get-RequiredReleaseAssetUrl -Release $release -Name (Get-BunAssetName)) -OutFile $runtimeArchive
+  Download-File -Url (Get-RequiredReleaseAssetUrl -Release $release -Name (Get-ReleaseArchiveName)) -OutFile $runtimeArchive
   Expand-Archive -LiteralPath $runtimeArchive -DestinationPath $archiveExtract -Force
 
+  Write-Step "Downloading latest Bun runtime"
+  $bunArchive = Join-Path $sessionDir "bun-runtime.zip"
+  Download-File -Url "$(Get-BunDownloadBaseUrl)/$(Get-BunAssetName)" -OutFile $bunArchive
+  Expand-BunRuntime -ArchivePath $bunArchive -DestinationPath $newDir
+
   foreach ($name in $rootFiles) {
+    if ($name -eq "bun.exe") {
+      continue
+    }
     $sourcePath = Join-Path $archiveExtract $name
     if (-not (Test-Path -LiteralPath $sourcePath)) {
       throw "Required file missing from release archive: $name"

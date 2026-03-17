@@ -1,5 +1,3 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
   [string]$RootPath,
   [switch]$SkipBuild,
@@ -8,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 . (Join-Path $PSScriptRoot "deployed-test-common.ps1")
 
 $deployRoot = if ($RootPath) {
@@ -41,8 +40,8 @@ try {
     $flgetCommand = Get-Command flget -ErrorAction Stop
     Assert-StartsWithPath $flgetCommand.Source $deployRoot "flget should resolve from the deployed root"
 
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Checking flget version"
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("install", $packageId, "--source", "scoop") -WorkingDirectory $deployRoot -Label "Installing $packageId from scoop"
+    Invoke-Checked { & $flgetCommand.Source --version }
+    Invoke-Checked { & $flgetCommand.Source install $packageId --source scoop }
 
     Write-Host "==> Re-activating deployed root after install"
     . .\activate.ps1
@@ -75,7 +74,7 @@ try {
     Assert-EqualPath $npmGlobalRoot $expectedGlobalRoot "npm global root should stay inside the deployed root"
     Assert-EqualPath $npmCache $expectedCache "npm cache should stay inside the deployed root"
 
-    Invoke-Checked -FilePath "npm" -ArgumentList @("install", "-g", $npmGlobalPackage) -WorkingDirectory $deployRoot -Label "Installing npm global package $npmGlobalPackage"
+    Invoke-Checked { npm install -g $npmGlobalPackage }
     if (-not (Test-Path -LiteralPath $expectedGlobalCmd)) {
       throw "npm global shim was not created under the deployed root: $expectedGlobalCmd"
     }
@@ -83,7 +82,7 @@ try {
       throw "npm global package was not created under the deployed root: $expectedGlobalPackagePath"
     }
 
-    Invoke-Checked -FilePath "npx" -ArgumentList @("--yes", $npxPackage, "--version") -WorkingDirectory $deployRoot -Label "Running npx package $npxPackage"
+    Invoke-Checked { npx --yes $npxPackage --version }
     if (-not (Test-Path -LiteralPath $expectedNpxCache)) {
       throw "npx cache was not created under the deployed root: $expectedNpxCache"
     }

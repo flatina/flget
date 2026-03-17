@@ -18,7 +18,6 @@
 - `flget` does not aim to be a drop-in replacement for `scoop` or `npm`
 - Many packages may still perform host mutation through their own install scripts
   - flget is portable but existing packages may not
-- `flget` prefers `<root>/bun.exe`, then parent `bun.exe`, then system `bun`
 
 ## 🚀 Install / Update
 
@@ -39,14 +38,14 @@ flget --version
 flget search 7zip
 flget install 7zip                     # prompts if ambiguous
 flget install 7zip --source scoop      # source-scoped install
-flget install ripgrep --source ghr     # source-scoped GitHub Releases query
+flget install servo --source ghr       # source-scoped GitHub Releases query
 flget install typescript --source npm  # source-scoped npm registry query
 flget install pnpm --source npmgh      # source-scoped GitHub source repo query
 flget skills install flatina/skills --skill cowsay-ts # install one skill from a skill repo and create shims
 ```
 - Use a fully-qualified ref such as `ghr:<owner>/<repo>` when you need an exact non-interactive install
 - Update flget itself with `flget update` or `.\update.ps1`
-- `update.ps1` is a stable Pages entrypoint; runtime assets are fetched from the latest GitHub release zip
+- `update.ps1` is a stable Pages entrypoint; flget runtime comes from the latest GitHub release zip and Bun is fetched from the latest official Bun release
 - Run `.\REGISTER_PATH.ps1` only if you want to add `flget` to PATH (not recommended)
 
 ## 📁 Directory Root Source
@@ -100,7 +99,7 @@ GITHUB_TOKEN=FLENC[v1,cipher:AES256_GCM,kdf:scrypt,n:16384,r:8,p:1,salt:...,iv:.
 
 If you need stronger key management, sharing, rotation, or auditability, use `SOPS` and inject secrets into process env before running `flget`
 
-## 🗂️ Directory Structure
+## 🗂️ Initialized Directory Structure
 
 ```text
 <flget-root>/
@@ -159,7 +158,7 @@ flget update [<package>] [--all] [--no-self]
 flget reset <package> [--source <source>]
 flget remove <package>
 flget list [--json]
-flget fund [<package>] [--json]
+flget fund [<package>]
 flget info <package>
 flget search <query> [--source <source>]
 flget env
@@ -177,12 +176,12 @@ flget skills install flatina/skills --list
 
 # source-scoped install query
 flget install cowsay --source scoop
-flget install ripgrep --source ghr
+flget install servo --source ghr
 flget install pnpm --source npmgh
 
 # exact install ref
 flget install scoop:cowsay
-flget install ghr:piuccio/cowsay
+flget install ghr:servo/servo
 flget install npm:cowsay@1.5.0
 flget install npmgh:piuccio/cowsay
 # same app id from multiple sources: last installed wins
@@ -192,11 +191,14 @@ flget install npmgh:piuccio/cowsay
 flget search cowsay
 flget search cowsay --source scoop
 flget search npm:cowsay
-flget search ghr:cowsay
+flget search ghr:servo
 flget search npmgh:cowsay
+
+# funding
 flget fund
-flget fund pnpm
-flget fund --json
+flget fund servo
+
+# skills
 flget skills find cowsay-ts
 ```
 
@@ -224,6 +226,18 @@ shims:
     name: my-cowsay
     runner: bun
 ---
+```
+
+## 🧩 Compatibility Overrides
+
+- `flget` has compatibility overrides system and repository
+  - https://github.com/flatina/flget-compat
+  - PRs welcome.
+
+```toml
+# overrides/npm/openai--codex.toml
+[env]
+CODEX_HOME = '${FL_ROOT}\.codex'
 ```
 
 ## 🛠️ Troubleshooting

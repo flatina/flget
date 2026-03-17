@@ -39,7 +39,7 @@ function formatResult(result: FundResult): string {
   return `${result.id}\t${result.sourceType}\t${links || "-"}${message}`;
 }
 
-export async function runFundCommand(context: RuntimeContext, packageId: string | undefined, asJson: boolean): Promise<void> {
+export async function runFundCommand(context: RuntimeContext, packageId: string | undefined): Promise<void> {
   const cache = new Map<string, Promise<FundingInfo>>();
   const metas = packageId
     ? [await loadPackageMeta(context.root, packageId)].filter((entry): entry is PackageMeta => entry !== null)
@@ -53,11 +53,6 @@ export async function runFundCommand(context: RuntimeContext, packageId: string 
   const results = (await Promise.all(appMetas.map((meta) => resolveFundingForMeta(context, meta, cache))))
     .filter((entry): entry is FundResult => entry !== null)
     .sort((left, right) => left.id.localeCompare(right.id) || left.sourceType.localeCompare(right.sourceType));
-
-  if (asJson) {
-    console.log(JSON.stringify(results, null, 2));
-    return;
-  }
 
   if (results.length === 0) {
     console.log(packageId ? `No funding information found for ${packageId}.` : "No funding information found.");

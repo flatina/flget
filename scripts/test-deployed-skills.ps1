@@ -1,5 +1,3 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
   [string]$RootPath,
   [switch]$SkipBuild,
@@ -8,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 . (Join-Path $PSScriptRoot "deployed-test-common.ps1")
 
 $deployRoot = if ($RootPath) {
@@ -36,9 +35,9 @@ try {
     $flgetCommand = Get-Command flget -ErrorAction Stop
     Assert-StartsWithPath $flgetCommand.Source $deployRoot "flget should resolve from the deployed root"
 
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Checking flget version"
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("skills", "install", $skillRepo, "--list") -WorkingDirectory $deployRoot -Label "Listing skills from $skillRepo"
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("skills", "install", $skillRepo, "--skill", $skillId) -WorkingDirectory $deployRoot -Label "Installing skill $skillId from $skillRepo"
+    Invoke-Checked { & $flgetCommand.Source --version }
+    Invoke-Checked { & $flgetCommand.Source skills install $skillRepo --list }
+    Invoke-Checked { & $flgetCommand.Source skills install $skillRepo --skill $skillId }
 
     Write-Host "==> Re-activating deployed root after install"
     . .\activate.ps1
@@ -59,7 +58,7 @@ try {
       throw "Installed skill list does not contain $skillId."
     }
 
-    Invoke-Checked -FilePath $expectedShim -ArgumentList @("hello from deployed skills test") -WorkingDirectory $deployRoot -Label "Running $skillShim shim"
+    Invoke-Checked { & $expectedShim "hello from deployed skills test" }
 
     Write-Host "==> Deployed skills test passed"
   } finally {

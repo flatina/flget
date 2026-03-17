@@ -1,11 +1,10 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
   [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $scripts = @(
@@ -18,9 +17,9 @@ $scripts = @(
 )
 
 if (-not $SkipBuild) {
-  Write-Host "==> Building flget bundle"
   Push-Location $repoRoot
   try {
+    Write-Host "==> bun run build"
     bun run build
     if ($LASTEXITCODE -ne 0) {
       throw "bun run build failed with exit code ${LASTEXITCODE}"
@@ -32,7 +31,7 @@ if (-not $SkipBuild) {
 
 foreach ($script in $scripts) {
   $scriptPath = Join-Path $PSScriptRoot $script
-  Write-Host "==> Running $script"
+  Write-Host "==> .\\$script -SkipBuild"
   & powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath -SkipBuild
   if ($LASTEXITCODE -ne 0) {
     throw "$script failed with exit code ${LASTEXITCODE}"

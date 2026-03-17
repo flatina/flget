@@ -1,5 +1,3 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
   [string]$RootPath,
   [switch]$SkipBuild,
@@ -8,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 . (Join-Path $PSScriptRoot "deployed-test-common.ps1")
 
 $deployRoot = if ($RootPath) {
@@ -38,8 +37,8 @@ try {
       throw "Initial activate should sync the default Scoop bucket: $mainBucketPath"
     }
 
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Checking flget version"
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("install", $packageId, "--source", "scoop") -WorkingDirectory $deployRoot -Label "Installing scoop package $packageId"
+    Invoke-Checked { & $flgetCommand.Source --version }
+    Invoke-Checked { & $flgetCommand.Source install $packageId --source scoop }
 
     Write-Host "==> Re-activating deployed root after install"
     . .\activate.ps1
@@ -47,7 +46,7 @@ try {
     $commandPath = ((& where.exe $commandName) | Select-Object -First 1).Trim()
     Assert-EqualPath $commandPath $expectedShim "scoop command should resolve from the deployed root shims"
 
-    Invoke-Checked -FilePath $commandName -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Running $commandName --version"
+    Invoke-Checked { & $commandName --version }
     Assert-InstalledPackageId -FlgetCommandPath $flgetCommand.Source -PackageId $packageId
 
     Write-Host "==> Deployed scoop test passed"
