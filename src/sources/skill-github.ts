@@ -19,7 +19,7 @@ import type {
 } from "../core/types";
 import { copyPath, ensureDir, pathExists, removePath } from "../utils/fs";
 import { parseYaml, readRuntimeText } from "../utils/runtime";
-import { deriveShimName, detectShimType, inferShimRunner } from "../utils/strings";
+import { deriveShimName, detectShimType, inferShimRunner, randomULID } from "../utils/strings";
 import { findExactGitHubCatalog, searchGitHubCatalog } from "./catalog-helpers";
 import { finalizePreparedPackage, inferRuntimeFromBins } from "./helpers";
 
@@ -311,7 +311,7 @@ export async function discoverSkillsInRepo(
   }
 
   const resolvedRef = requestedRef ?? (await getDefaultBranchHead(context, owner, repo)).sha;
-  const tempRepoDir = join(context.dirs.temp, `skill-discovery-${repo}-${crypto.randomUUID()}`);
+  const tempRepoDir = join(context.dirs.temp, `skill-discovery-${repo}-${randomULID()}`);
 
   try {
     const tarball = await downloadToStore(context, getTarballUrl(owner, repo, resolvedRef), {

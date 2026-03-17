@@ -11,6 +11,7 @@ import type { InstallOptions, PackageMeta, PersistDef, PreparedPackage, RuntimeC
 import { getSourceFamilyByType } from "../core/source-family";
 import { ensureDir, pathExists, removePath, renameStrict, writeText } from "../utils/fs";
 import { runCommand } from "../utils/process";
+import { randomULID } from "../utils/strings";
 import { buildPackageMeta, getCurrentPath, getPackageBaseDir } from "./helpers";
 
 const DEFAULT_UPDATE_BASE_URL = "https://flatina.github.io/flget";
@@ -34,7 +35,7 @@ function escapePowerShellSingleQuotedString(value: string): string {
 }
 
 async function createFallbackUpdateLauncher(root: string, tempDir: string, baseUrl: string): Promise<string> {
-  const launcherDir = join(tempDir, `self-update-launcher-${crypto.randomUUID()}`);
+  const launcherDir = join(tempDir, `self-update-launcher-${randomULID()}`);
   await ensureDir(launcherDir);
   const launcherPath = join(launcherDir, "launch-update.ps1");
   const escapedRoot = escapePowerShellSingleQuotedString(root);
@@ -114,7 +115,7 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
     return;
   }
 
-  const stagingDir = join(context.dirs.temp, `${resolved.id}-${crypto.randomUUID()}`);
+  const stagingDir = join(context.dirs.temp, `${resolved.id}-${randomULID()}`);
   const packageBase = getPackageBaseDir(context, existing.id, existing.sourceType);
   const currentPath = getCurrentPath(context, existing.id, existing.sourceType);
   const previousVersionPath = await getUniqueVersionPath(packageBase, existing.resolvedVersion);
