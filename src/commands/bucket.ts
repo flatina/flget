@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { readConfig, writeConfig } from "../core/config";
 import type { RuntimeContext } from "../core/types";
-import { pathExists } from "../utils/fs";
+import { ensureDir, pathExists } from "../utils/fs";
 import { runCommand } from "../utils/process";
 
 async function gitExists(): Promise<boolean> {
@@ -26,6 +26,7 @@ async function syncBucket(context: RuntimeContext, name: string, url: string): P
   if (exists) {
     await runCommand(["git", "-C", target, "pull", "--ff-only"]);
   } else {
+    await ensureDir(context.dirs.buckets);
     await runCommand(["git", "clone", "--depth", "1", url, target]);
   }
 }

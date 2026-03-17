@@ -46,23 +46,8 @@ export function getDirs(root: string): FlgetDirs {
 export async function ensureLayout(root: string): Promise<FlgetDirs> {
   const dirs = getDirs(root);
   await Promise.all([
-    ensureDir(dirs.scoop),
-    ensureDir(dirs.npm),
-    ensureDir(dirs.ghr),
-    ensureDir(dirs.npmgh),
-    ensureDir(dirs.agents),
-    ensureDir(dirs.skills),
-    ensureDir(dirs.buckets),
     ensureDir(dirs.shims),
-    ensureDir(join(dirs.root, ROOT_SECRETS_DIR_NAME)),
     ensureDir(dirs.temp),
-    ensureDir(dirs.downloads),
-    ensureDir(dirs.transactions),
-    ensureDir(join(dirs.localRegistries, "overrides", "npm")),
-    ensureDir(join(dirs.localRegistries, "overrides", "github-release")),
-    ensureDir(join(dirs.localRegistries, "overrides", "npm-github")),
-    ensureDir(dirs.officialRegistries),
-    ensureDir(dirs.communityRegistries),
   ]);
   return dirs;
 }
