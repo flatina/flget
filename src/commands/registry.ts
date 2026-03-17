@@ -8,7 +8,7 @@ export async function runRegistryCommand(context: RuntimeContext, args: string[]
 
   switch (subcommand) {
     case "list":
-      console.log(`local\t${context.dirs.localRegistries}`);
+      console.log(`local\t${context.dirs.compatLocal}`);
       for (const entry of listConfiguredRegistries(config)) {
         console.log(`${entry.scope}\t${entry.url}`);
       }
