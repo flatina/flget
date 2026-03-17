@@ -1,48 +1,12 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)]
   [string]$RootPath,
   [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
-
-function Invoke-Checked {
-  param(
-    [string]$FilePath,
-    [string[]]$ArgumentList,
-    [string]$WorkingDirectory,
-    [string]$Label
-  )
-
-  Write-Host "==> $Label"
-  Push-Location $WorkingDirectory
-  try {
-    & $FilePath @ArgumentList
-    if ($LASTEXITCODE -ne 0) {
-      throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($ArgumentList -join ' ')"
-    }
-  } finally {
-    Pop-Location
-  }
-}
-
-function Resolve-BunExe {
-  $bunCommand = Get-Command bun -ErrorAction Stop
-  $bunSource = $bunCommand.Source
-  if ($bunSource -notlike "*.exe") {
-    $candidate = Join-Path (Split-Path -Parent $bunSource) "bun.exe"
-    if (Test-Path -LiteralPath $candidate) {
-      $bunSource = $candidate
-    }
-  }
-  if (-not (Test-Path -LiteralPath $bunSource)) {
-    throw "bun executable not found: $bunSource"
-  }
-  return $bunSource
-}
+$ProgressPreference = "SilentlyContinue"
+. "$PSScriptRoot\build-common.ps1"
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $deployRoot = [System.IO.Path]::GetFullPath($RootPath)
@@ -59,7 +23,12 @@ if (Test-Path -LiteralPath $deployRoot) {
 $bunExe = Resolve-BunExe
 
 if (-not $SkipBuild) {
-  Invoke-Checked -FilePath $bunExe -ArgumentList @("run", "build") -WorkingDirectory $repoRoot -Label "Building flget bundle"
+  Push-Location $repoRoot
+  try {
+    Invoke-Checked { & $bunExe run build }
+  } finally {
+    Pop-Location
+  }
 }
 
 Write-Host "==> Preparing deployed root at $deployRoot"

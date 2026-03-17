@@ -1,3 +1,5 @@
+$ProgressPreference = "SilentlyContinue"
+
 function Assert-EqualPath {
   param(
     [string]$Actual,
@@ -28,21 +30,15 @@ function Assert-StartsWithPath {
 
 function Invoke-Checked {
   param(
-    [string]$FilePath,
-    [string[]]$ArgumentList,
-    [string]$WorkingDirectory,
-    [string]$Label
+    [scriptblock]$Action
   )
 
-  Write-Host "==> $Label"
-  Push-Location $WorkingDirectory
-  try {
-    & $FilePath @ArgumentList
-    if ($LASTEXITCODE -ne 0) {
-      throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($ArgumentList -join ' ')"
-    }
-  } finally {
-    Pop-Location
+  $label = ($Action.ToString().Trim() -split "\r?\n" | Select-Object -First 1).Trim()
+  Write-Host "==> $label"
+  $global:LASTEXITCODE = 0
+  & $Action
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $label"
   }
 }
 

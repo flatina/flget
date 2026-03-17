@@ -27,7 +27,7 @@ Usage:
   flget reset <package> [--source <source>]
   flget remove <package>
   flget list [--json]
-  flget fund [<package>] [--json]
+  flget fund [<package>]
   flget info <package>
   flget search <query> [--source <source>]
   flget skills <find|install|list|info|update|remove> ...
@@ -248,7 +248,7 @@ const COMMANDS: CommandSpec[] = [
     name: "fund",
     contextMode: "existing",
     async run(parsed, _installOptions, context) {
-      await runFundCommand(context, parsed.positional[0], getBooleanFlag(parsed.flags, "json"));
+      await runFundCommand(context, parsed.positional[0]);
     },
   }),
   defineRuntimeCommand({

@@ -154,7 +154,7 @@ function renderPowerShellShim(id: string, sourceType: PackageMeta["sourceType"],
 
   switch (runner) {
     case "cmd":
-      return renderPowerShellWrapper(`& cmd /c "call \`"$target\`"${args} $args"`, `$target = "${target}"`);
+      return renderPowerShellWrapper(`& $target${args} @args`, `$target = "${target}"`);
     case "powershell":
       return renderPowerShellWrapper(`& powershell -NoProfile -ExecutionPolicy Bypass -File $target${args} @args`, `$target = "${target}"`);
     case "java":

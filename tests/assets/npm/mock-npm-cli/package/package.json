@@ -1,0 +1,9 @@
+{
+  "name": "mock-npm-cli",
+  "version": "1.0.0",
+  "bin": {
+    "mock-npm": "bin/mock-npm.js"
+  },
+  "funding": "https://github.com/sponsors/mocknpm",
+  "description": "Support mock npm"
+}

@@ -1,3 +1,5 @@
+$ProgressPreference = "SilentlyContinue"
+
 $targetBin = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "shims"))
 $current = [Environment]::GetEnvironmentVariable("Path", "User")
 $parts = @()

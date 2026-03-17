@@ -1,5 +1,3 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
   [string]$RootPath,
   [switch]$SkipBuild,
@@ -8,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
 . (Join-Path $PSScriptRoot "deployed-test-common.ps1")
 
 $deployRoot = if ($RootPath) {
@@ -35,8 +34,8 @@ try {
     $flgetCommand = Get-Command flget -ErrorAction Stop
     Assert-StartsWithPath $flgetCommand.Source $deployRoot "flget should resolve from the deployed root"
 
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Checking flget version"
-    Invoke-Checked -FilePath $flgetCommand.Source -ArgumentList @("install", $packageRef, "--source", "npmgh") -WorkingDirectory $deployRoot -Label "Installing npmgh package $packageRef"
+    Invoke-Checked { & $flgetCommand.Source --version }
+    Invoke-Checked { & $flgetCommand.Source install $packageRef --source npmgh }
 
     Write-Host "==> Re-activating deployed root after install"
     . .\activate.ps1
@@ -44,7 +43,7 @@ try {
     $commandPath = ((& where.exe $commandName) | Select-Object -First 1).Trim()
     Assert-EqualPath $commandPath $expectedShim "npmgh command should resolve from the deployed root shims"
 
-    Invoke-Checked -FilePath $expectedShim -ArgumentList @("--version") -WorkingDirectory $deployRoot -Label "Running $commandName shim --version"
+    Invoke-Checked { & $expectedShim --version }
     Assert-InstalledPackageId -FlgetCommandPath $flgetCommand.Source -PackageId $packageId
 
     Write-Host "==> Deployed npmgh test passed"

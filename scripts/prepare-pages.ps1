@@ -1,12 +1,14 @@
-#Requires -Version 5.1
-[CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)]
   [string]$OutputPath
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
+$ProgressPreference = "SilentlyContinue"
+
+if (-not $OutputPath) {
+  throw "OutputPath is required"
+}
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $publishRoot = [System.IO.Path]::GetFullPath($OutputPath)
