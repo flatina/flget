@@ -56,3 +56,22 @@ export function ensureArray<T>(value: T | T[] | undefined): T[] {
 export function pad(value: string, width: number): string {
   return value.length >= width ? value : `${value}${" ".repeat(width - value.length)}`;
 }
+
+const CROCKFORD = "0123456789abcdefghjkmnpqrstvwxyz";
+
+export function randomULID(): string {
+  const chars = new Array<string>(26);
+  let now = Date.now();
+  for (let i = 9; i >= 0; i--) {
+    chars[i] = CROCKFORD[now & 31]!;
+    now = Math.floor(now / 32);
+  }
+  const rand = crypto.getRandomValues(new Uint8Array(10));
+  for (let i = 0; i < 16; i++) {
+    const bit = i * 5;
+    const byte = bit >> 3;
+    const shift = bit & 7;
+    chars[10 + i] = CROCKFORD[((rand[byte]! >> shift) | ((rand[byte + 1] ?? 0) << (8 - shift))) & 31]!;
+  }
+  return chars.join("");
+}

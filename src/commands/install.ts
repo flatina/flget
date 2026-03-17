@@ -9,6 +9,7 @@ import { deleteShims, refreshPackageShims } from "../core/shim";
 import { completeTransaction, createTransaction, failTransaction, setTransactionPhase } from "../core/transaction";
 import type { InstallOptions, PreparedPackage, SourceType, TransactionPhase, RuntimeContext } from "../core/types";
 import { ensureDir, pathExists, removePath, renameStrict } from "../utils/fs";
+import { randomULID } from "../utils/strings";
 
 function looksLikeFullyQualifiedIdentifier(identifier: string): boolean {
   return /^scoop:[^/]+\/.+$/.test(identifier)
@@ -159,7 +160,7 @@ export async function runInstallCommand(context: RuntimeContext, identifier: str
     await removeExistingPackage(context, resolved.sourceType, resolved.id);
   }
 
-  const stagingDir = join(context.dirs.temp, `${resolved.id}-${crypto.randomUUID()}`);
+  const stagingDir = join(context.dirs.temp, `${resolved.id}-${randomULID()}`);
   const targetCurrent = getCurrentPath(context, resolved.id, resolved.sourceType);
   const targetBase = getPackageBaseDir(context, resolved.id, resolved.sourceType);
   resolved.extra = {
