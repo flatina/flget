@@ -22,9 +22,9 @@ try {
 
   Invoke-Checked { . .\activate.ps1; flget --version } -ExpectContains @($ExpectedVersionOutput)
 
-  Invoke-Checked { . .\activate.ps1; flget install jq --source scoop } -ExpectContains @("Installed jq@1.0.0")
+  Invoke-Checked { . .\activate.ps1; flget install fldemo --source scoop } -ExpectContains @("Installed fldemo@1.0.0")
 
-  Invoke-Checked { . .\activate.ps1; jq --version } -ExpectContains @("jq-1.0.0")
+  Invoke-Checked { . .\activate.ps1; fldemo --version } -ExpectContains @("fldemo-1.0.0")
 
   Invoke-Checked { . .\activate.ps1; flget install npm:mock-npm-cli } -ExpectContains @("Installed mock-npm-cli@1.0.0")
 

@@ -188,7 +188,7 @@ function Initialize-BaseInstallEnvironment {
   }
 
   $baseAssetFiles = @{
-    "jq.cmd" = (Join-Path $resolvedRepoRoot "tests\assets\scoop\jq.cmd")
+    "fldemo.cmd" = (Join-Path $resolvedRepoRoot "tests\assets\scoop\fldemo.cmd")
   }
   foreach ($entry in $ExtraAssetFiles.GetEnumerator()) {
     $baseAssetFiles[$entry.Key] = [string]$entry.Value
@@ -199,14 +199,14 @@ function Initialize-BaseInstallEnvironment {
   }
 
   $bucketRepoPath = Join-Path $resolvedServerRoot "bucket-main"
-  $jqAssetPath = Join-Path $assetsRoot "jq.cmd"
+  $fldemoAssetPath = Join-Path $assetsRoot "fldemo.cmd"
   Initialize-GitRepo -RepoPath $bucketRepoPath -Files @{
-    "bucket/jq.json" = (New-ScoopManifestJson `
+    "bucket/fldemo.json" = (New-ScoopManifestJson `
       -Version "1.0.0" `
-      -Url "$normalizedBaseUrl/assets/jq.cmd" `
-      -Hash (Get-Sha256Hex $jqAssetPath) `
-      -Target "jq.cmd" `
-      -ShimName "jq") + "`n"
+      -Url "$normalizedBaseUrl/assets/fldemo.cmd" `
+      -Hash (Get-Sha256Hex $fldemoAssetPath) `
+      -Target "fldemo.cmd" `
+      -ShimName "fldemo") + "`n"
   }
 
   $compatRepoPath = Join-Path $resolvedServerRoot "compat"
