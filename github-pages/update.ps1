@@ -92,6 +92,7 @@ function Get-ReleaseHeaders {
 function Get-ReleaseMetadata {
   param([string]$Tag)
 
+  $ProgressPreference = "SilentlyContinue"
   $apiBase = Get-ReleaseApiBaseUrl
   $owner = Get-ReleaseOwner
   $repo = Get-ReleaseRepo
@@ -141,7 +142,17 @@ function Download-File {
     [string]$Url,
     [string]$OutFile
   )
+  $ProgressPreference = "SilentlyContinue"
   Invoke-WebRequest -Uri $Url -OutFile $OutFile
+}
+
+function Expand-ArchiveSilent {
+  param(
+    [string]$Path,
+    [string]$DestinationPath
+  )
+  $ProgressPreference = "SilentlyContinue"
+  Expand-Archive -LiteralPath $Path -DestinationPath $DestinationPath -Force
 }
 
 function Expand-BunRuntime {
@@ -151,7 +162,7 @@ function Expand-BunRuntime {
   )
 
   $extractRoot = Join-Path $DestinationPath "bun-runtime"
-  Expand-Archive -LiteralPath $ArchivePath -DestinationPath $extractRoot -Force
+  Expand-ArchiveSilent -Path $ArchivePath -DestinationPath $extractRoot
   $bunExe = Get-ChildItem -Path $extractRoot -Filter "bun.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
   if (-not $bunExe) {
     throw "bun.exe not found in downloaded Bun archive"
@@ -267,7 +278,7 @@ try {
 
   $runtimeArchive = Join-Path $sessionDir "flget-runtime.zip"
   Download-File -Url (Get-RequiredReleaseAssetUrl -Release $release -Name (Get-ReleaseArchiveName)) -OutFile $runtimeArchive
-  Expand-Archive -LiteralPath $runtimeArchive -DestinationPath $archiveExtract -Force
+  Expand-ArchiveSilent -Path $runtimeArchive -DestinationPath $archiveExtract
 
   Write-Step "Downloading latest Bun runtime"
   $bunArchive = Join-Path $sessionDir "bun-runtime.zip"
