@@ -14,7 +14,7 @@ import { runSearchCommand } from "./commands/search";
 import { runSkillsCommand } from "./commands/skills";
 import { runUpdateCommand } from "./commands/update";
 import type { Arch, InstallOptions, InstallSource, RuntimeContext } from "./core/types";
-import { getBooleanFlag, getStringFlag, parseCliArgs, type ParsedCliArgs } from "./utils/cli";
+import { getBooleanFlag, getStringFlag, getStringFlags, parseCliArgs, type ParsedCliArgs } from "./utils/cli";
 
 declare const __FLGET_VERSION__: string;
 const VERSION = __FLGET_VERSION__;
@@ -23,11 +23,11 @@ function printHelp(): void {
   console.log(`flget v${VERSION}
 
 Usage:
-  flget install <source-or-query> [--source <source>] [--force] [--no-scripts] [--no-hash] [--arch <arch>]
+  flget install <source-or-query> [--source <source>] [--force] [--no-scripts] [--no-hash] [--arch <arch>] [--tag <tag>...]
   flget update [<package>] [--all] [--no-self]
   flget reset <package> [--source <source>]
   flget remove <package>
-  flget list [--json]
+  flget list [--json] [--tag <tag>]
   flget fund [<package>]
   flget info <package>
   flget search <query> [--source <source>]
@@ -66,6 +66,7 @@ Install options:
   --no-scripts
   --no-hash
   --arch <arch>
+  --tag <tag>          (repeatable; adds tags to package metadata)
   --skill <skill-id>   (repeatable; for flget skills install <owner>/<repo>)
   --list               (for flget skills install <owner>/<repo>)
   --all                (for flget skills install/update)`);
@@ -242,7 +243,7 @@ const COMMANDS: CommandSpec[] = [
     aliases: ["ls"],
     contextMode: "existing",
     async run(parsed, _installOptions, context) {
-      await runListCommand(context.root, getBooleanFlag(parsed.flags, "json"));
+      await runListCommand(context.root, getBooleanFlag(parsed.flags, "json"), getStringFlag(parsed.flags, "tag"));
     },
   }),
   defineRuntimeCommand({
@@ -285,6 +286,11 @@ async function loadRuntimeContext(spec: RuntimeCommandSpec, parsed: ParsedCliArg
   }
 }
 
+function parseTagFlags(parsed: ParsedCliArgs): string[] | undefined {
+  const tags = getStringFlags(parsed.flags, "tag");
+  return tags.length > 0 ? tags : undefined;
+}
+
 function getInstallOptions(parsed: ParsedCliArgs): InstallOptions {
   return {
     force: getBooleanFlag(parsed.flags, "force") || getBooleanFlag(parsed.flags, "f"),
@@ -292,6 +298,7 @@ function getInstallOptions(parsed: ParsedCliArgs): InstallOptions {
     noScripts: getBooleanFlag(parsed.flags, "no-scripts"),
     arch: parseArchFlag(parsed),
     source: parseInstallSourceFlag(parsed),
+    tags: parseTagFlags(parsed),
   };
 }
 

@@ -88,13 +88,14 @@ interface PackageMetaBase<TSourceType extends SourceType = SourceType> {
   portability: Portability;
   runtime: RuntimeKind;
   bin: ShimDef[];
-  interactiveEntries?: ShimDef[];
+  uiEntries?: ShimDef[];
   daemonEntries?: DaemonEntry[];
   persist: PersistDef[];
   envAddPath?: string[];
   envSet?: Record<string, string>;
   warnings: string[];
   notes?: string | null;
+  tags?: string[];
 }
 
 export interface AppPackageMeta<TSourceType extends AppSourceType = AppSourceType> extends PackageMetaBase<TSourceType> {
@@ -172,6 +173,7 @@ export interface InstallOptions {
   noScripts?: boolean;
   force?: boolean;
   source?: InstallSource;
+  tags?: string[];
 }
 
 export interface ResolvedSourceExtra {
@@ -201,7 +203,7 @@ interface PreparedPackageBase {
   portability: Portability;
   runtime: RuntimeKind;
   bin: ShimDef[];
-  interactiveEntries?: ShimDef[];
+  uiEntries?: ShimDef[];
   daemonEntries?: DaemonEntry[];
   persist: PersistDef[];
   envAddPath?: string[];
@@ -257,7 +259,7 @@ export interface RegistryOverride {
   assetPattern?: string;
   extractDir?: string;
   bin?: Partial<ShimDef>[];
-  interactive?: Partial<ShimDef>[];
+  ui?: Partial<ShimDef>[];
   daemon?: Array<{
     name?: string;
     run?: Partial<ShimDef>;
