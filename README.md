@@ -202,6 +202,45 @@ flget fund servo
 flget skills find cowsay-ts
 ```
 
+## 🌐 Environment Info
+
+- use `flget env` or `flget env --toml` to show flget environment
+
+```powershell
+# flget env
+FL_ENV_VERSION=1
+FL_ROOT=C:\flget
+FL_SHIMS_DIR=shims
+FL_CONFIG_FILE=flget.config.toml
+FL_SOURCES=scoop,ghr,npm,npmgh
+FL_BUCKETS=main
+FL_OFFLINE_ROOTS=K:\flget
+
+# flget env --toml
+env_version = 1
+root = "C:\\flget"
+shims_dir = "shims"
+config_file = "flget.config.toml"
+sources = ["scoop", "ghr", "npm", "npmgh"]
+buckets = ["main"]
+offline_roots = ["K:\\flget"]
+```
+
+## 🏷️ Tags
+
+- Attach tags to packages at install time with `--tag` (repeatable)
+- Filter installed packages by tag with `flget list --tag`
+- Can also be used to install and manage your own extensions
+
+```powershell
+# install with tags
+flget install ghr:my_org/my_repo --tag my_tag
+
+# list packages with a specific tag
+flget list --tsv --path --tag my_tag
+my_org/my_repo	1.0.0	ghr	portable	my_tag	ghr/my_org/my_repo/current
+```
+
 ## 🤖 Skill Script Shim Generation
 
 - Declare skill shims with top-level `shims` in `SKILL.md` frontmatter
