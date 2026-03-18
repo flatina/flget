@@ -1,6 +1,6 @@
 import { getDefaultConfig, writeConfig } from "./config";
 import { ensureLayout, ROOT_CONFIG_NAME } from "./dirs";
-import { regenerateEnvScripts } from "./env-script";
+import { refreshActivationCache } from "./activation-cache";
 import { ensureStaticRootShims, regenerateRootShims } from "./shim";
 import { pathExists } from "../utils/fs";
 import { join } from "node:path";
@@ -13,7 +13,7 @@ export async function ensureRootInitialized(root: string): Promise<void> {
 }
 
 export async function ensureRootScripts(root: string): Promise<void> {
-  await regenerateEnvScripts(root);
+  await refreshActivationCache(root);
   try {
     await regenerateRootShims(root);
     await ensureStaticRootShims(root);

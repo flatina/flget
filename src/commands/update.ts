@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { resolveSource } from "../sources";
 import { applyPersistTransaction, rollbackCommittedUpdate } from "../core/fs-transaction";
-import { regenerateEnvScripts } from "../core/env-script";
+import { refreshActivationCache } from "../core/activation-cache";
 import { listPackageMetas, loadPackageMeta, savePackageMeta } from "../core/metadata";
 import { refreshPackageShims } from "../core/shim";
 import { assertSourceEnabled } from "../core/source-enablement";
@@ -145,6 +145,11 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
     await setTransactionPhase(context.root, existing.id, "staging-ready");
 
     const nextMeta = buildPackageMeta(resolved, prepared);
+    if (options.tags?.length) {
+      nextMeta.tags = options.tags;
+    } else if (existing.tags?.length) {
+      nextMeta.tags = [...existing.tags];
+    }
     if (isUnchangedSkillUpdate(existing, nextMeta)) {
       await removePath(stagingDir);
       await savePackageMeta(context.root, nextMeta);
@@ -182,7 +187,7 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
     if (isWinner) {
       await refreshPackageShims(context.root, existing, nextMeta);
     }
-    await regenerateEnvScripts(context.root);
+    await refreshActivationCache(context.root);
     await completeTransaction(context.root, existing.id);
 
     console.log(`Updated ${existing.id}: ${existing.resolvedVersion} -> ${nextMeta.resolvedVersion}`);

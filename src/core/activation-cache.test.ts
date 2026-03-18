@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { regenerateEnvScripts } from "./env-script";
+import { refreshActivationCache } from "./activation-cache";
 import { savePackageMeta, setPackageWinner } from "./metadata";
 import { ensureRootInitialized } from "./root";
 
-describe("regenerateEnvScripts", () => {
+describe("refreshActivationCache", () => {
   test("expands envSet root placeholders into cached activation values", async () => {
     const root = await mkdtemp(join(tmpdir(), "flget-config-"));
     await ensureRootInitialized(root);
@@ -33,7 +33,7 @@ describe("regenerateEnvScripts", () => {
     });
     await setPackageWinner(root, { sourceType: "npm", id: "codex" });
 
-    await regenerateEnvScripts(root);
+    await refreshActivationCache(root);
 
     const cache = await readFile(join(root, "tmp", "cache-env-sets.txt"), "utf8");
     expect(cache).toContain(`CODEX_HOME=${root}\\.codex`);

@@ -1,4 +1,4 @@
-import { regenerateEnvScripts } from "../core/env-script";
+import { refreshActivationCache } from "../core/activation-cache";
 import { loadPackageMeta, loadPackageMetaBySource, setPackageWinner } from "../core/metadata";
 import { getSourceFamilyByCliSource } from "../core/source-family";
 import { createShims, deleteShims } from "../core/shim";
@@ -30,7 +30,7 @@ export async function runResetCommand(
   }
   await setPackageWinner(context.root, selected);
   await createShims(context.root, selected.sourceType, selected.id, selected.bin);
-  await regenerateEnvScripts(context.root);
+  await refreshActivationCache(context.root);
 
   if (source && previousWinner?.sourceType !== selected.sourceType) {
     console.log(`Reset ${id} to ${source}`);

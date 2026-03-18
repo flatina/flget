@@ -1,6 +1,6 @@
 
 import { getCurrentPath } from "./helpers";
-import { regenerateEnvScripts } from "../core/env-script";
+import { refreshActivationCache } from "../core/activation-cache";
 import { loadPackageMeta } from "../core/metadata";
 import { completeTransaction, listTransactions, loadTransaction } from "../core/transaction";
 import { createShims, deleteShims } from "../core/shim";
@@ -51,7 +51,7 @@ export async function runRepairCommand(context: RuntimeContext, packageId?: stri
     throw new Error(`Unable to repair ${packageId} automatically.`);
   }
 
-  await regenerateEnvScripts(context.root);
+  await refreshActivationCache(context.root);
   await completeTransaction(context.root, packageId);
   console.log(`Repaired ${packageId}`);
 }

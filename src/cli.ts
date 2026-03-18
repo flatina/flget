@@ -1,5 +1,7 @@
 import { loadContext } from "./core/context";
 import { runBucketCommand } from "./commands/bucket";
+import { runCacheCommand } from "./commands/cache";
+import { runConfigCommand } from "./commands/config";
 import { runEnvCommand } from "./commands/env";
 import { runFundCommand } from "./commands/fund";
 import { runInfoCommand } from "./commands/info";
@@ -27,12 +29,14 @@ Usage:
   flget update [<package>] [--all] [--no-self]
   flget reset <package> [--source <source>]
   flget remove <package>
-  flget list [--json] [--tag <tag>]
+  flget list [--json] [--tsv] [--tag <tag>] [--path]
   flget fund [<package>]
   flget info <package>
   flget search <query> [--source <source>]
   flget skills <find|install|list|info|update|remove> ...
-  flget env
+  flget env [--toml]
+  flget config <show|create>
+  flget cache refresh
   flget repair [package]
   flget offline-root <add|remove|list|first|last> ...
   flget bucket <add|remove|list|update> ...
@@ -172,10 +176,25 @@ const COMMANDS: CommandSpec[] = [
       await runRegistryCommand(context, parsed.positional);
     },
   }),
-  defineNoContextCommand({
+  defineRuntimeCommand({
     name: "env",
-    async run(_parsed, _installOptions) {
-      await runEnvCommand(process.cwd());
+    contextMode: "existing",
+    async run(parsed, _installOptions, context) {
+      await runEnvCommand(context, {
+        toml: getBooleanFlag(parsed.flags, "toml"),
+      });
+    },
+  }),
+  defineNoContextCommand({
+    name: "config",
+    async run(parsed, _installOptions) {
+      await runConfigCommand(parsed.positional);
+    },
+  }),
+  defineNoContextCommand({
+    name: "cache",
+    async run(parsed, _installOptions) {
+      await runCacheCommand(parsed.positional);
     },
   }),
   defineRuntimeCommand({
@@ -243,7 +262,12 @@ const COMMANDS: CommandSpec[] = [
     aliases: ["ls"],
     contextMode: "existing",
     async run(parsed, _installOptions, context) {
-      await runListCommand(context.root, getBooleanFlag(parsed.flags, "json"), getStringFlag(parsed.flags, "tag"));
+      await runListCommand(context.root, {
+        json: getBooleanFlag(parsed.flags, "json"),
+        tsv: getBooleanFlag(parsed.flags, "tsv"),
+        tag: getStringFlag(parsed.flags, "tag"),
+        path: getBooleanFlag(parsed.flags, "path"),
+      });
     },
   }),
   defineRuntimeCommand({

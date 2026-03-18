@@ -56,7 +56,7 @@ function buildEnvSetCache(root: string, metas: PackageMeta[]): string {
   return `${lines.join("\n")}${lines.length ? "\n" : ""}`;
 }
 
-export async function regenerateEnvScripts(root: string): Promise<void> {
+export async function refreshActivationCache(root: string): Promise<void> {
   const dirs = getDirs(root);
   const metas = await listWinnerPackageMetas(root);
 
