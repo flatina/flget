@@ -202,9 +202,9 @@ function Invoke-EnvRefresh {
 
   $bunExe = Join-Path $Root "bun.exe"
   $cliPath = Join-Path $Root "flget.js"
-  & $bunExe $cliPath env
+  & $bunExe $cliPath cache refresh
   if ($LASTEXITCODE -ne 0) {
-    throw "flget env failed with exit code ${LASTEXITCODE}"
+    throw "flget cache refresh failed with exit code ${LASTEXITCODE}"
   }
 }
 

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { findExactInstallMatches, findSearchMatches, parseSearchQuery, type SearchMatch } from "./search";
 import { resolveSource } from "../sources";
 import { buildPackageMeta, getCurrentPath, getPackageBaseDir } from "./helpers";
-import { regenerateEnvScripts } from "../core/env-script";
+import { refreshActivationCache } from "../core/activation-cache";
 import { deletePackageMetaBySource, loadPackageMeta, loadPackageMetaBySource, savePackageMeta, setPackageWinner } from "../core/metadata";
 import { deleteShims, refreshPackageShims } from "../core/shim";
 import { completeTransaction, createTransaction, failTransaction, setTransactionPhase } from "../core/transaction";
@@ -203,7 +203,7 @@ export async function runInstallCommand(context: RuntimeContext, identifier: str
     await savePackageMeta(context.root, meta);
     await setPackageWinner(context.root, meta);
     await refreshPackageShims(context.root, previousWinner, meta);
-    await regenerateEnvScripts(context.root);
+    await refreshActivationCache(context.root);
     await completeTransaction(context.root, resolved.id);
 
     console.log(`Installed ${meta.id}@${meta.resolvedVersion}`);

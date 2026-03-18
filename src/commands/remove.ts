@@ -1,6 +1,6 @@
 import { getPackageBaseDir } from "./helpers";
 import { deletePackageMetaBySource, loadPackageMeta, promotePackageWinner } from "../core/metadata";
-import { regenerateEnvScripts } from "../core/env-script";
+import { refreshActivationCache } from "../core/activation-cache";
 import { createShims, deleteShims } from "../core/shim";
 import { completeTransaction, createTransaction, failTransaction } from "../core/transaction";
 import type { RuntimeContext } from "../core/types";
@@ -22,7 +22,7 @@ export async function runRemoveCommand(context: RuntimeContext, id: string): Pro
     if (fallbackWinner) {
       await createShims(context.root, fallbackWinner.sourceType, fallbackWinner.id, fallbackWinner.bin);
     }
-    await regenerateEnvScripts(context.root);
+    await refreshActivationCache(context.root);
     await completeTransaction(context.root, meta.id);
     console.log(`Removed ${id}`);
   } catch (error) {
