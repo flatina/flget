@@ -1,7 +1,0 @@
-{
-  "name": "demo",
-  "version": "1.0.0",
-  "bin": {
-    "demo": "bin/demo.js"
-  }
-}
