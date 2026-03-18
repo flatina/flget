@@ -59,11 +59,11 @@ copy K:\flget\*.* <some_directory>   # copy only root files, not recursive
 
 # Add the directory root as a source
 cd <some_directory>
-flget root add K:\flget
-flget root list
-flget root first K:\flget   # highest priority
-flget root last K:\flget    # lowest priority
-flget root remove K:\flget
+flget offline-root add K:\flget
+flget offline-root list
+flget offline-root first K:\flget   # highest priority
+flget offline-root last K:\flget    # lowest priority
+flget offline-root remove K:\flget
 
 flget install 7zip --source scoop
 ```
@@ -153,17 +153,19 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
 
 ```powershell
 # basic apps
-flget install <source-or-query> [--source <source>] [--force] [--no-scripts] [--no-hash] [--arch <arch>]
+flget install <source-or-query> [--source <source>] [--force] [--no-scripts] [--no-hash] [--arch <arch>] [--tag <tag>...]
 flget update [<package>] [--all] [--no-self]
 flget reset <package> [--source <source>]
 flget remove <package>
-flget list [--json]
+flget list [--json] [--tsv] [--tag <tag>] [--path]
 flget fund [<package>]
 flget info <package>
 flget search <query> [--source <source>]
-flget env
+flget env [--toml]
+flget config <show|create>
+flget cache refresh
 flget repair [package]
-flget root <add|remove|list|first|last> ...
+flget offline-root <add|remove|list|first|last> ...
 flget bucket <add|remove|list|update> ...
 flget compat <list|add|remove|update> ...
 
