@@ -12,6 +12,7 @@ export function getDirs(root: string): FlgetDirs {
   const resolvedRoot = resolve(root);
   const temp = join(resolvedRoot, "tmp");
   const compat = join(resolvedRoot, "compat");
+  const xdg = join(resolvedRoot, "xdg");
   const secretsDir = join(resolvedRoot, ROOT_SECRETS_DIR_NAME);
   return {
     root: resolvedRoot,
@@ -35,8 +36,11 @@ export function getDirs(root: string): FlgetDirs {
     cliMap: join(resolvedRoot, "flget.js.map"),
     activatePs1: join(resolvedRoot, "activate.ps1"),
     updatePs1: join(resolvedRoot, "update.ps1"),
-    registerPathPs1: join(resolvedRoot, "REGISTER_PATH.ps1"),
     configFile: join(resolvedRoot, ROOT_CONFIG_NAME),
+    xdgConfig: join(xdg, ".config"),
+    xdgData: join(xdg, ".local", "share"),
+    xdgState: join(xdg, ".local", "state"),
+    xdgCache: join(xdg, ".cache"),
     envFile: join(resolvedRoot, ROOT_ENV_NAME),
     secretsDir,
     secretsFile: join(secretsDir, ROOT_SHARED_SECRETS_NAME),
@@ -48,6 +52,10 @@ export async function ensureLayout(root: string): Promise<FlgetDirs> {
   await Promise.all([
     ensureDir(dirs.shims),
     ensureDir(dirs.temp),
+    ensureDir(dirs.xdgConfig),
+    ensureDir(dirs.xdgData),
+    ensureDir(dirs.xdgState),
+    ensureDir(dirs.xdgCache),
   ]);
   return dirs;
 }

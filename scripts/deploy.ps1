@@ -37,7 +37,6 @@ $assets = @(
   @{ Source = (Join-Path $repoRoot "dist\flget.js.map"); Destination = (Join-Path $deployRoot "flget.js.map") },
   @{ Source = (Join-Path $repoRoot "github-pages\activate.ps1"); Destination = (Join-Path $deployRoot "activate.ps1") },
   @{ Source = (Join-Path $repoRoot "github-pages\update.ps1"); Destination = (Join-Path $deployRoot "update.ps1") },
-  @{ Source = (Join-Path $repoRoot "github-pages\REGISTER_PATH.ps1"); Destination = (Join-Path $deployRoot "REGISTER_PATH.ps1") },
   @{ Source = $bunExe; Destination = (Join-Path $deployRoot "bun.exe") }
 )
 

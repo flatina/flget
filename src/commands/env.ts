@@ -5,7 +5,7 @@ export interface EnvOptions {
   toml?: boolean;
 }
 
-const ENV_VERSION = 1;
+const ENV_VERSION = 2;
 
 export async function runEnvCommand(context: RuntimeContext, options: EnvOptions = {}): Promise<void> {
   const { dirs, config } = context;
@@ -25,6 +25,10 @@ export async function runEnvCommand(context: RuntimeContext, options: EnvOptions
     if (config.roots.length > 0) {
       lines.push(`offline_roots = ${tomlArray(config.roots.map((r) => r.path))}`);
     }
+    lines.push(`xdg_config = ${quoteToml(rel(dirs.xdgConfig))}`);
+    lines.push(`xdg_data = ${quoteToml(rel(dirs.xdgData))}`);
+    lines.push(`xdg_state = ${quoteToml(rel(dirs.xdgState))}`);
+    lines.push(`xdg_cache = ${quoteToml(rel(dirs.xdgCache))}`);
     console.log(lines.join("\n"));
     return;
   }
@@ -40,6 +44,10 @@ export async function runEnvCommand(context: RuntimeContext, options: EnvOptions
   if (config.roots.length > 0) {
     console.log(`FL_OFFLINE_ROOTS=${config.roots.map((r) => r.path).join(",")}`);
   }
+  console.log(`FL_XDG_CONFIG=${rel(dirs.xdgConfig)}`);
+  console.log(`FL_XDG_DATA=${rel(dirs.xdgData)}`);
+  console.log(`FL_XDG_STATE=${rel(dirs.xdgState)}`);
+  console.log(`FL_XDG_CACHE=${rel(dirs.xdgCache)}`);
 }
 
 function quoteToml(value: string): string {

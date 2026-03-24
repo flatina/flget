@@ -33,6 +33,7 @@ import {
   normalizeOverrideUiEntries,
   normalizeOverrideNotes,
   normalizeOverridePersist,
+  normalizeOverridePersistType,
   normalizeOverrideWarnings,
 } from "./helpers";
 
@@ -220,6 +221,7 @@ export const githubReleaseSource: SourceResolver<"github-release", GitHubRelease
       bin: effectiveBin,
       uiEntries,
       daemonEntries,
+      persistType: normalizeOverridePersistType(override),
       persist: normalizeOverridePersist(override),
       envSet: normalizeOverrideEnvSet(override),
       warnings: [

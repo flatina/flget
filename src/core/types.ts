@@ -6,6 +6,7 @@ export type { InstallKind, InstallSource, SourceDirsKey, SourceType } from "./so
 export type Portability = "portable" | "host-integrated" | "unverified";
 export type RuntimeKind = "standalone" | "bun-native" | "runtime-dependent" | "unverified";
 export type Arch = "64bit" | "32bit" | "arm64";
+export type PersistType = "none" | "xdg" | "xdg-full" | "folder-migrate";
 export type AppSourceType = Exclude<SourceType, "skill-github">;
 export type InstallKindBySourceType<TSourceType extends SourceType> = Extract<SourceFamily, { sourceType: TSourceType }>["installKind"];
 export type SourceTypeByCliSource<TInstallSource extends InstallSource> = Extract<SourceFamily, { cliSource: TInstallSource }>["sourceType"];
@@ -71,8 +72,11 @@ export interface FlgetDirs extends Record<SourceDirsKey, string> {
   cliMap: string;
   activatePs1: string;
   updatePs1: string;
-  registerPathPs1: string;
   configFile: string;
+  xdgConfig: string;
+  xdgData: string;
+  xdgState: string;
+  xdgCache: string;
   envFile: string;
   secretsDir: string;
   secretsFile: string;
@@ -90,6 +94,7 @@ interface PackageMetaBase<TSourceType extends SourceType = SourceType> {
   bin: ShimDef[];
   uiEntries?: ShimDef[];
   daemonEntries?: DaemonEntry[];
+  persistType?: PersistType;
   persist: PersistDef[];
   envAddPath?: string[];
   envSet?: Record<string, string>;
@@ -205,6 +210,7 @@ interface PreparedPackageBase {
   bin: ShimDef[];
   uiEntries?: ShimDef[];
   daemonEntries?: DaemonEntry[];
+  persistType?: PersistType;
   persist: PersistDef[];
   envAddPath?: string[];
   envSet?: Record<string, string>;
@@ -256,6 +262,7 @@ export type AnySourceResolver = {
 }[SourceType];
 
 export interface RegistryOverride {
+  persistType?: PersistType;
   assetPattern?: string;
   extractDir?: string;
   bin?: Partial<ShimDef>[];

@@ -42,7 +42,6 @@ $commonAssets = @(
   @{ Source = (Join-Path $repoRoot "dist\flget.js"); Destination = "flget.js" },
   @{ Source = (Join-Path $repoRoot "dist\flget.js.map"); Destination = "flget.js.map" },
   @{ Source = (Join-Path $repoRoot "github-pages\activate.ps1"); Destination = "activate.ps1" },
-  @{ Source = (Join-Path $repoRoot "github-pages\REGISTER_PATH.ps1"); Destination = "REGISTER_PATH.ps1" },
   @{ Source = (Join-Path $repoRoot "github-pages\update.ps1"); Destination = "update.ps1" }
 )
 

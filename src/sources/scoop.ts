@@ -363,13 +363,15 @@ export const scoopSource: SourceResolver<"scoop", ScoopResolvedExtra> = {
     const bin = normalizeBins(manifest.bin);
     const uiEntries = shortcutEntries.length > 0 ? dedupeShimDefs(shortcutEntries) : undefined;
 
+    const persist = normalizePersistEntries(manifest.persist);
     return finalizePreparedPackage(stagingDir, {
       portability: detectPortability(manifest),
       runtime: detectRuntime(bin),
       bin,
       uiEntries,
       daemonEntries: [],
-      persist: normalizePersistEntries(manifest.persist),
+      persistType: persist.length > 0 ? "folder-migrate" : undefined,
+      persist,
       envAddPath: ensureArray(manifest.env_add_path),
       envSet,
       warnings,

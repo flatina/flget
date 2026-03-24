@@ -180,6 +180,7 @@ export async function savePackageMeta(root: string, meta: PackageMeta): Promise<
       bin: meta.bin,
       uiEntries: meta.uiEntries,
       daemonEntries: meta.daemonEntries,
+      persistType: meta.persistType,
       persist: meta.persist,
       envAddPath: meta.envAddPath,
       envSet: meta.envSet,

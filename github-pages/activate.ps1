@@ -163,3 +163,8 @@ if (Test-Path $setCache) {
     }
   }
 }
+
+$env:XDG_CONFIG_HOME = "$env:FL_ROOT\xdg\.config"
+$env:XDG_DATA_HOME   = "$env:FL_ROOT\xdg\.local\share"
+$env:XDG_STATE_HOME  = "$env:FL_ROOT\xdg\.local\state"
+$env:XDG_CACHE_HOME  = "$env:FL_ROOT\xdg\.cache"
