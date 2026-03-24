@@ -160,7 +160,7 @@ export async function runInstallCommand(context: RuntimeContext, identifier: str
     await removeExistingPackage(context, resolved.sourceType, resolved.id);
   }
 
-  const stagingDir = join(context.dirs.temp, `${resolved.id}-${randomULID()}`);
+  const stagingDir = join(context.dirs.staging, `${resolved.id}-${randomULID()}`);
   const targetCurrent = getCurrentPath(context, resolved.id, resolved.sourceType);
   const targetBase = getPackageBaseDir(context, resolved.id, resolved.sourceType);
   resolved.extra = {
