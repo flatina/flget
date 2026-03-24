@@ -47,7 +47,7 @@ Set-StrictMode -Version 3.0
 
 $root = '${escapedRoot}'
 $baseUrl = '${escapedBaseUrl}'
-$sessionDir = Join-Path $root ("tmp\\self-update\\bootstrap-" + [guid]::NewGuid().ToString("N"))
+$sessionDir = Join-Path $root "xdg\\.local\\state\\flget\\self-update\\bootstrap-${randomULID()}"
 New-Item -ItemType Directory -Force -Path $sessionDir | Out-Null
 $updateScript = Join-Path $sessionDir "update.ps1"
 Invoke-WebRequest -Uri "$baseUrl/update.ps1" -OutFile $updateScript
@@ -62,7 +62,7 @@ async function runSelfUpdate(context: RuntimeContext): Promise<void> {
   const baseUrl = getSelfUpdateBaseUrl();
   const updateScriptPath = await pathExists(context.dirs.updatePs1)
     ? context.dirs.updatePs1
-    : await createFallbackUpdateLauncher(context.root, context.dirs.temp, baseUrl);
+    : await createFallbackUpdateLauncher(context.root, context.dirs.staging, baseUrl);
   const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", updateScriptPath, "-RootPath", context.root, "-BaseUrl", baseUrl];
 
   if (process.env[SELF_UPDATE_SYNC_ENV] === "1") {
@@ -115,7 +115,7 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
     return;
   }
 
-  const stagingDir = join(context.dirs.temp, `${resolved.id}-${randomULID()}`);
+  const stagingDir = join(context.dirs.staging, `${resolved.id}-${randomULID()}`);
   const packageBase = getPackageBaseDir(context, existing.id, existing.sourceType);
   const currentPath = getCurrentPath(context, existing.id, existing.sourceType);
   const previousVersionPath = await getUniqueVersionPath(packageBase, existing.resolvedVersion);
@@ -174,7 +174,7 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
     }
 
     const effectivePersistType = nextMeta.persistType
-      ?? (existing.persist.length > 0 ? "folder-migrate" : "none");
+      ?? (existing.persist.length > 0 || nextMeta.persist.length > 0 ? "folder-migrate" : "none");
 
     if (effectivePersistType === "folder-migrate") {
       await setTransactionPhase(context.root, existing.id, "persisting");

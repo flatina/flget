@@ -60,7 +60,7 @@ export interface FlgetDirs extends Record<SourceDirsKey, string> {
   agents: string;
   buckets: string;
   shims: string;
-  temp: string;
+  staging: string;
   downloads: string;
   transactions: string;
   compat: string;

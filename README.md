@@ -145,12 +145,9 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
     .local/
       share/              # XDG_DATA_HOME
       state/              # XDG_STATE_HOME
+        flget/            # staging, transactions, activation cache
     .cache/               # XDG_CACHE_HOME
-  tmp/
-    downloads/
-    transactions/
-    cache-env-paths.txt
-    cache-env-sets.txt
+      flget/              # download temp files
 ```
 
 ## 🧭 Commands
@@ -218,7 +215,7 @@ flget skills find cowsay-ts
 FL_ENV_VERSION=2
 FL_ROOT=C:\flget
 FL_SHIMS_DIR=shims
-FL_CONFIG_FILE=flget.config.toml
+FL_CONFIG_FILE=flget.root.toml
 FL_SOURCES=scoop,ghr,npm,npmgh
 FL_BUCKETS=main
 FL_OFFLINE_ROOTS=K:\flget
@@ -231,7 +228,7 @@ FL_XDG_CACHE=xdg/.cache
 env_version = 2
 root = "C:\\flget"
 shims_dir = "shims"
-config_file = "flget.config.toml"
+config_file = "flget.root.toml"
 sources = ["scoop", "ghr", "npm", "npmgh"]
 buckets = ["main"]
 offline_roots = ["K:\\flget"]

@@ -35,7 +35,7 @@ describe("refreshActivationCache", () => {
 
     await refreshActivationCache(root);
 
-    const cache = await readFile(join(root, "tmp", "cache-env-sets.txt"), "utf8");
+    const cache = await readFile(join(root, "xdg", ".local", "state", "flget", "cache-env-sets.txt"), "utf8");
     expect(cache).toContain(`CODEX_HOME=${root}\\.codex`);
     expect(cache).toContain(`CODEX_CACHE=${join(root, "npm", "codex", "current")}\\cache`);
   });

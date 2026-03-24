@@ -69,8 +69,8 @@ export async function refreshActivationCache(root: string): Promise<void> {
   const metas = await listWinnerPackageMetas(root);
 
   try {
-    await writeText(join(dirs.temp, "cache-env-paths.txt"), buildPathsCache(metas));
-    await writeText(join(dirs.temp, "cache-env-sets.txt"), buildEnvSetCache(root, metas));
+    await writeText(join(dirs.staging, "cache-env-paths.txt"), buildPathsCache(metas));
+    await writeText(join(dirs.staging, "cache-env-sets.txt"), buildEnvSetCache(root, metas));
   } catch {
     // Read-only roots should still allow basic shim activation from static scripts.
   }

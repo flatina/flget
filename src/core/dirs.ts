@@ -10,9 +10,10 @@ export const ROOT_SHARED_SECRETS_NAME = ".env";
 
 export function getDirs(root: string): FlgetDirs {
   const resolvedRoot = resolve(root);
-  const temp = join(resolvedRoot, "tmp");
   const compat = join(resolvedRoot, "compat");
   const xdg = join(resolvedRoot, "xdg");
+  const flgetState = join(xdg, ".local", "state", "flget");
+  const flgetCache = join(xdg, ".cache", "flget");
   const secretsDir = join(resolvedRoot, ROOT_SECRETS_DIR_NAME);
   return {
     root: resolvedRoot,
@@ -24,9 +25,9 @@ export function getDirs(root: string): FlgetDirs {
     skills: join(resolvedRoot, "agents", "skills"),
     buckets: join(resolvedRoot, "buckets"),
     shims: join(resolvedRoot, "shims"),
-    temp,
-    downloads: join(temp, "downloads"),
-    transactions: join(temp, "transactions"),
+    staging: flgetState,
+    downloads: flgetCache,
+    transactions: join(flgetState, "transactions"),
     compat,
     compatLocal: join(compat, "local"),
     compatOfficial: join(compat, "official"),
@@ -51,7 +52,6 @@ export async function ensureLayout(root: string): Promise<FlgetDirs> {
   const dirs = getDirs(root);
   await Promise.all([
     ensureDir(dirs.shims),
-    ensureDir(dirs.temp),
     ensureDir(dirs.xdgConfig),
     ensureDir(dirs.xdgData),
     ensureDir(dirs.xdgState),

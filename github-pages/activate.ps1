@@ -144,7 +144,7 @@ if ((Test-Path "$PSScriptRoot\flget.js") -and (Test-BucketBootstrapNeeded)) {
 $env:FL_ACTIVE = "1"
 $env:PATH = "$env:FL_ROOT\shims;$env:PATH"
 
-$pathCache = Join-Path $PSScriptRoot "tmp\cache-env-paths.txt"
+$pathCache = Join-Path $PSScriptRoot "xdg\.local\state\flget\cache-env-paths.txt"
 if (Test-Path $pathCache) {
   foreach ($line in Get-Content -LiteralPath $pathCache) {
     if ($line) {
@@ -153,7 +153,7 @@ if (Test-Path $pathCache) {
   }
 }
 
-$setCache = Join-Path $PSScriptRoot "tmp\cache-env-sets.txt"
+$setCache = Join-Path $PSScriptRoot "xdg\.local\state\flget\cache-env-sets.txt"
 if (Test-Path $setCache) {
   foreach ($line in Get-Content -LiteralPath $setCache) {
     if (-not $line) { continue }

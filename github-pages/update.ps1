@@ -10,6 +10,12 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 $ProgressPreference = "SilentlyContinue"
 
+function New-SessionId {
+  $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString("x")
+  $rnd = "{0:x8}" -f (Get-Random -Maximum ([int]::MaxValue))
+  return "$ts-$rnd"
+}
+
 function Write-Step {
   param([string]$Message)
   Write-Host "==> $Message"
@@ -235,10 +241,8 @@ $normalizedBaseUrl = $BaseUrl.TrimEnd("/")
 
 Ensure-Directory $resolvedRoot
 Ensure-Directory (Join-Path $resolvedRoot "shims")
-Ensure-Directory (Join-Path $resolvedRoot "tmp")
-
 if (-not $ApplyDownloadedUpdate) {
-  $launcherDir = Join-Path $resolvedRoot ("tmp\\self-update\\launcher-" + [guid]::NewGuid().ToString("N"))
+  $launcherDir = Join-Path $resolvedRoot ("xdg\.local\state\flget\self-update\launcher-" + (New-SessionId))
   Ensure-Directory $launcherDir
 
   $latestScript = Join-Path $launcherDir "update.ps1"
@@ -249,7 +253,7 @@ if (-not $ApplyDownloadedUpdate) {
   exit $LASTEXITCODE
 }
 
-$sessionDir = Join-Path $resolvedRoot ("tmp\\self-update\\session-" + [guid]::NewGuid().ToString("N"))
+$sessionDir = Join-Path $resolvedRoot ("xdg\.local\state\flget\self-update\session-" + (New-SessionId))
 $newDir = Join-Path $sessionDir "new"
 $oldDir = Join-Path $sessionDir "old"
 $archiveExtract = Join-Path $sessionDir "runtime"
