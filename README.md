@@ -46,7 +46,6 @@ flget skills install flatina/skills --skill cowsay-ts # install one skill from a
 - Use a fully-qualified ref such as `ghr:<owner>/<repo>` when you need an exact non-interactive install
 - Update flget itself with `flget update` or `.\update.ps1`
 - `update.ps1` is a stable Pages entrypoint; flget runtime comes from the latest GitHub release zip and Bun is fetched from the latest official Bun release
-- Run `.\REGISTER_PATH.ps1` only if you want to add `flget` to PATH (not recommended)
 
 ## 📁 Directory Root Source
 
@@ -109,7 +108,6 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
   bun.exe
   activate.ps1
   update.ps1
-  REGISTER_PATH.ps1
   scoop/
     <package-id>/
       flget.meta.json
@@ -142,6 +140,12 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
     bun.ps1
     flget.cmd
     flget.ps1
+  xdg/
+    .config/              # XDG_CONFIG_HOME (set by activate.ps1)
+    .local/
+      share/              # XDG_DATA_HOME
+      state/              # XDG_STATE_HOME
+    .cache/               # XDG_CACHE_HOME
   tmp/
     downloads/
     transactions/
@@ -207,25 +211,34 @@ flget skills find cowsay-ts
 ## 🌐 Environment Info
 
 - use `flget env` or `flget env --toml` to show flget environment
+- XDG directories are set by `activate.ps1` — all XDG-aware programs in the session use the flget root's XDG directories
 
 ```powershell
 # flget env
-FL_ENV_VERSION=1
+FL_ENV_VERSION=2
 FL_ROOT=C:\flget
 FL_SHIMS_DIR=shims
 FL_CONFIG_FILE=flget.config.toml
 FL_SOURCES=scoop,ghr,npm,npmgh
 FL_BUCKETS=main
 FL_OFFLINE_ROOTS=K:\flget
+FL_XDG_CONFIG=xdg/.config
+FL_XDG_DATA=xdg/.local/share
+FL_XDG_STATE=xdg/.local/state
+FL_XDG_CACHE=xdg/.cache
 
 # flget env --toml
-env_version = 1
+env_version = 2
 root = "C:\\flget"
 shims_dir = "shims"
 config_file = "flget.config.toml"
 sources = ["scoop", "ghr", "npm", "npmgh"]
 buckets = ["main"]
 offline_roots = ["K:\\flget"]
+xdg_config = "xdg/.config"
+xdg_data = "xdg/.local/share"
+xdg_state = "xdg/.local/state"
+xdg_cache = "xdg/.cache"
 ```
 
 ## 🏷️ Tags

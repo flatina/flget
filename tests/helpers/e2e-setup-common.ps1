@@ -163,7 +163,7 @@ function Initialize-BaseInstallEnvironment {
   foreach ($file in @("flget.js", "flget.js.map")) {
     Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "dist\$file") -Destination (Join-Path $runtimeStageRoot $file) -Force
   }
-  foreach ($file in @("activate.ps1", "REGISTER_PATH.ps1", "update.ps1")) {
+  foreach ($file in @("activate.ps1", "update.ps1")) {
     Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "github-pages\$file") -Destination (Join-Path $runtimeStageRoot $file) -Force
   }
 

@@ -7,7 +7,7 @@ import { runProcess, type ProcessResult } from "./process";
 const staticRootSource = fileURLToPath(new URL("../../github-pages/", import.meta.url));
 
 async function copyStaticRootScripts(root: string): Promise<void> {
-  const rootFiles = ["activate.ps1", "update.ps1", "REGISTER_PATH.ps1"];
+  const rootFiles = ["activate.ps1", "update.ps1"];
   for (const name of rootFiles) {
     await copyFile(join(staticRootSource, name), join(root, name));
   }

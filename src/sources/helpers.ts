@@ -1,6 +1,6 @@
 import { basename, extname, join, relative } from "node:path";
 import { readdir } from "node:fs/promises";
-import type { DaemonEntry, PersistDef, PreparedPackage, RegistryOverride, RuntimeKind, ShimDef } from "../core/types";
+import type { DaemonEntry, PersistDef, PersistType, PreparedPackage, RegistryOverride, RuntimeKind, ShimDef } from "../core/types";
 import { ensureRelativePathInsideRoot } from "../utils/fs";
 import { detectShimType, deriveShimName, inferShimRunner, wildcardToRegExp } from "../utils/strings";
 import type { PackageJsonAppManifest } from "./package-json-app";
@@ -66,6 +66,14 @@ export function normalizeOverrideDaemonEntries(entries: RegistryOverride["daemon
       autoStart: entry.autoStart === true ? true : undefined,
     }];
   });
+}
+
+export function normalizeOverridePersistType(override: RegistryOverride | null): PersistType | undefined {
+  const valid = ["none", "xdg", "xdg-full", "folder-migrate"] as const;
+  if (override?.persistType && valid.includes(override.persistType as typeof valid[number])) {
+    return override.persistType;
+  }
+  return undefined;
 }
 
 export function normalizeOverridePersist(override: RegistryOverride | null): PersistDef[] {
@@ -261,6 +269,7 @@ export function finalizePackageJsonPrepare(
     bin: effectiveBin,
     uiEntries,
     daemonEntries,
+    persistType: normalizeOverridePersistType(override),
     persist: normalizeOverridePersist(override),
     envSet: normalizeOverrideEnvSet(override),
     warnings: normalizeOverrideWarnings(override),

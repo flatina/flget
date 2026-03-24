@@ -263,7 +263,6 @@ $rootFiles = @(
   "flget.js.map",
   "bun.exe",
   "activate.ps1",
-  "REGISTER_PATH.ps1",
   "update.ps1"
 )
 

@@ -173,13 +173,20 @@ async function updateOne(context: RuntimeContext, existing: PackageMeta, options
       throw error;
     }
 
-    await setTransactionPhase(context.root, existing.id, "persisting");
-    try {
-      await applyPersistTransaction(previousVersionPath, currentPath, mergePersist(existing.persist, nextMeta.persist), context.logger);
-    } catch (error) {
-      const failedCurrentPath = await getUniqueVersionPath(packageBase, `${nextMeta.resolvedVersion}-failed`);
-      await rollbackCommittedUpdate(currentPath, previousVersionPath, failedCurrentPath);
-      throw error;
+    const effectivePersistType = nextMeta.persistType
+      ?? (existing.persist.length > 0 ? "folder-migrate" : "none");
+
+    if (effectivePersistType === "folder-migrate") {
+      await setTransactionPhase(context.root, existing.id, "persisting");
+      try {
+        await applyPersistTransaction(previousVersionPath, currentPath, mergePersist(existing.persist, nextMeta.persist), context.logger);
+      } catch (error) {
+        const failedCurrentPath = await getUniqueVersionPath(packageBase, `${nextMeta.resolvedVersion}-failed`);
+        await rollbackCommittedUpdate(currentPath, previousVersionPath, failedCurrentPath);
+        throw error;
+      }
+    } else if (existing.persistType === "folder-migrate" || (!existing.persistType && existing.persist.length > 0)) {
+      context.logger.warn(`${existing.id}: persistType changed from folder-migrate. Previous data may be in: ${previousVersionPath}`);
     }
 
     await setTransactionPhase(context.root, existing.id, "shimming");

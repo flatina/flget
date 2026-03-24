@@ -36,10 +36,18 @@ function collectEnvPaths(metas: PackageMeta[]): string[] {
   return Array.from(new Set(entries));
 }
 
+const RESERVED_XDG_KEYS = new Set([
+  "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME",
+]);
+
 function collectEnvSets(root: string, metas: PackageMeta[]): Array<[string, string]> {
   const envSet = new Map<string, string>();
   for (const meta of metas) {
     for (const [key, value] of Object.entries(meta.envSet ?? {})) {
+      if (RESERVED_XDG_KEYS.has(key)) {
+        console.warn(`[warn] ${meta.id}: envSet key "${key}" is reserved for root XDG policy and will be ignored.`);
+        continue;
+      }
       envSet.set(key, expandEnvValue(root, meta, value));
     }
   }
