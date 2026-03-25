@@ -101,7 +101,7 @@ async function listMetaTargets(root: string): Promise<string[]> {
     if (!await pathExists(base)) {
       continue;
     }
-    const entries = await scanGlob(`*/${PACKAGE_META_NAME}`, base);
+    const entries = await scanGlob(`**/${PACKAGE_META_NAME}`, base);
     allTargets.push(...entries.map((entry) => join(base, entry)));
   }
   return allTargets;

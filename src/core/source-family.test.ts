@@ -17,4 +17,17 @@ describe("source family registry", () => {
       installKind: "skill",
     });
   });
+
+  test("infers multi-segment IDs from nested meta locations", () => {
+    expect(inferPackageLocationFromRelativeParts(["ghr", "servo", "servo", "flget.meta.json"])).toEqual({
+      id: "servo/servo",
+      sourceType: "github-release",
+      installKind: "app",
+    });
+    expect(inferPackageLocationFromRelativeParts(["gh", "npm", "piuccio", "cowsay", "flget.meta.json"])).toEqual({
+      id: "piuccio/cowsay",
+      sourceType: "npm-github",
+      installKind: "app",
+    });
+  });
 });
