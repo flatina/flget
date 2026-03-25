@@ -37,7 +37,7 @@ describe("bun fallback shims", () => {
     }]);
 
     const cmd = await readFile(join(root, "shims", "demo-shell.cmd"), "utf8");
-    expect(cmd).toContain('bash "%SHIMDIR%\\..\\agents\\skills\\demo-skill\\current\\scripts\\demo.sh" %*');
+    expect(cmd).toContain('bash "%SHIMDIR%\\..\\gh\\skills\\demo-skill\\current\\scripts\\demo.sh" %*');
 
     const ps1 = await readFile(join(root, "shims", "demo-shell.ps1"), "utf8");
     expect(ps1).toContain("& bash $target @args");

@@ -123,12 +123,12 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
       flget.meta.json
       current/
       <version>/		# reusable local source
-  npmgh/
-    <package-id>/
-      flget.meta.json
-      current/
-      <version>/		# reusable local source
-  agents/
+  gh/
+    npm/
+      <package-id>/
+        flget.meta.json
+        current/
+        <version>/		# reusable local source
     skills/
       <skill-id>/
         flget.meta.json

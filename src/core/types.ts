@@ -57,7 +57,6 @@ export interface RootConfig {
 
 export interface FlgetDirs extends Record<SourceDirsKey, string> {
   root: string;
-  agents: string;
   buckets: string;
   shims: string;
   staging: string;
