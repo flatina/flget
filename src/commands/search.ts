@@ -1,11 +1,9 @@
-import { listPackageMetas } from "../core/metadata";
 import { assertSourceEnabled, isSourceEnabled } from "../core/source-enablement";
-import { SOURCE_FAMILIES, getSourceFamilyByType } from "../core/source-family";
-import type { AnySourceResolver, InstallSource, PackageMeta, RuntimeContext } from "../core/types";
-import { pathExists } from "../utils/fs";
+import { SOURCE_FAMILIES } from "../core/source-family";
+import type { AnySourceResolver, InstallSource, RuntimeContext } from "../core/types";
 import { listResolvers } from "../sources";
 
-export type SearchScope = InstallSource | "offline-root" | null;
+export type SearchScope = InstallSource | null;
 
 export interface SearchMatch {
   source: Exclude<SearchScope, null>;
@@ -22,7 +20,6 @@ export function parseSearchQuery(queryInput: string): { scope: SearchScope; quer
   const trimmed = queryInput.trim();
   const prefixes: Array<Exclude<SearchScope, null>> = [
     ...SOURCE_FAMILIES.map((family) => family.cliSource),
-    "offline-root",
   ];
   for (const prefix of prefixes) {
     if (trimmed.toLowerCase().startsWith(`${prefix}:`)) {
@@ -56,44 +53,6 @@ export function applySearchSource(queryInput: string, source?: InstallSource): s
   return trimmed;
 }
 
-function scoreLocalMeta(meta: PackageMeta, query: string): number {
-  const values = [meta.id, meta.displayName, meta.sourceRef, ...(meta.bin.map((bin) => bin.name))];
-  if (values.some((value) => value.toLowerCase() === query)) {
-    return 3;
-  }
-  if (values.some((value) => value.toLowerCase().includes(query))) {
-    return 2;
-  }
-  return 0;
-}
-
-async function searchRoots(context: RuntimeContext, query: string): Promise<SearchMatch[]> {
-  const results: Array<SearchMatch & { score: number }> = [];
-
-  for (const rootEntry of context.config.roots) {
-    if (!await pathExists(rootEntry.path)) {
-      continue;
-    }
-    for (const meta of await listPackageMetas(rootEntry.path)) {
-      const score = scoreLocalMeta(meta, query);
-      if (query !== "" && score === 0) {
-        continue;
-      }
-      const source = getSourceFamilyByType(meta.sourceType).cliSource;
-      results.push({
-        score,
-        source: "offline-root",
-        identifier: meta.sourceRef,
-        line: `${source}:${meta.sourceRef.replace(/^[^:]+:/, "")} -> ${rootEntry.path}`,
-        installable: false,
-      });
-    }
-  }
-
-  results.sort((left, right) => right.score - left.score || left.line.localeCompare(right.line));
-  return results.map(({ score: _score, ...entry }) => entry);
-}
-
 function dedupeMatches(matches: SearchMatch[]): SearchMatch[] {
   const seen = new Set<string>();
   const deduped: SearchMatch[] = [];
@@ -121,7 +80,7 @@ function shouldIncludeResolver(
   options?: { includeSkills?: boolean },
 ): boolean {
   if (scope !== null) {
-    return scope !== "offline-root" && resolver.family.cliSource === scope;
+    return resolver.family.cliSource === scope;
   }
   if (resolver.family.cliSource === "skill") {
     return options?.includeSkills === true;
@@ -162,20 +121,17 @@ async function collectSourceMatches(
 export async function findSearchMatches(
   context: RuntimeContext,
   queryInput: string,
-  options?: { includeRoots?: boolean; includeSkills?: boolean },
+  options?: { includeSkills?: boolean },
 ): Promise<SearchMatch[]> {
   const { scope, query } = parseSearchQuery(queryInput);
   if (queryInput.includes(":") && query === "") {
     throw new Error("Usage: flget search <query>");
   }
-  if (scope && scope !== "offline-root") {
+  if (scope) {
     assertSourceEnabled(context.config, scope);
   }
 
   const matches = await collectSourceMatches(context, scope, query, options ?? {}, "search");
-  if ((scope === null && options?.includeRoots) || scope === "offline-root") {
-    matches.push(...await searchRoots(context, query));
-  }
   return dedupeMatches(matches);
 }
 
@@ -188,7 +144,7 @@ export async function findExactInstallMatches(
   if (queryInput.includes(":") && query === "") {
     throw new Error("Usage: flget search <query>");
   }
-  if (scope && scope !== "offline-root") {
+  if (scope) {
     assertSourceEnabled(context.config, scope);
   }
 
@@ -200,7 +156,7 @@ export async function runSearchCommand(context: RuntimeContext, queryInput: stri
     throw new Error("Usage: flget search <query>");
   }
 
-  const results = await findSearchMatches(context, applySearchSource(queryInput, source), { includeRoots: true });
+  const results = await findSearchMatches(context, applySearchSource(queryInput, source));
   if (results.length === 0) {
     console.log("No matches found.");
     return;

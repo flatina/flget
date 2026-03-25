@@ -187,6 +187,7 @@ export async function savePackageMeta(root: string, meta: PackageMeta): Promise<
       warnings: meta.warnings,
       notes: meta.notes ?? null,
       tags: meta.tags?.length ? meta.tags : undefined,
+      depotOrigin: meta.depotOrigin,
       skill: meta.installKind === "skill" ? meta.skill : undefined,
     };
     await writeJson(target, stored);

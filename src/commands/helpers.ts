@@ -53,6 +53,7 @@ export function buildPackageMeta(
       envSet: prepared.envSet,
       warnings: prepared.warnings,
       notes: prepared.notes ?? null,
+      depotOrigin: prepared.depotOrigin,
       skill: prepared.skill,
     };
   }
@@ -77,5 +78,6 @@ export function buildPackageMeta(
     envSet: prepared.envSet,
     warnings: prepared.warnings,
     notes: prepared.notes ?? null,
+    depotOrigin: prepared.depotOrigin,
   };
 }

@@ -16,7 +16,8 @@ function looksLikeFullyQualifiedIdentifier(identifier: string): boolean {
     || /^npm:(@[^/]+\/[^@]+|[^@/]+)(?:@.+)?$/.test(identifier)
     || /^ghr:[^/]+\/[^@]+(?:@.+)?$/.test(identifier)
     || /^npmgh:[^/]+\/[^@]+(?:@.+)?$/.test(identifier)
-    || /^skill:[^/]+\/[^@#]+(?:@[^#]+)?(?:#.+)?$/.test(identifier);
+    || /^skill:[^/]+\/[^@#]+(?:@[^#]+)?(?:#.+)?$/.test(identifier)
+    || /^depot:.+$/.test(identifier);
 }
 
 function toSearchQuery(identifier: string, source?: InstallOptions["source"]): string {
@@ -42,6 +43,8 @@ function directSourceShortcut(identifier: string, source?: InstallOptions["sourc
     case "npmgh":
     case "skill":
       return identifier.includes("/") ? `${source}:${identifier}` : null;
+    case "depot":
+      return `depot:${identifier}`;
     default:
       return null;
   }
@@ -76,7 +79,7 @@ async function resolveAmbiguousInstallMatches(identifier: string, matches: Searc
   }
 
   throw new Error(
-    `Multiple matches found for ${identifier}. Use --source <scoop|npm|ghr|npmgh|skill> or run in an interactive terminal.`,
+    `Multiple matches found for ${identifier}. Use --source <scoop|npm|ghr|npmgh|skill|depot> or run in an interactive terminal.`,
   );
 }
 
@@ -113,13 +116,12 @@ async function resolveInstallIdentifier(
 
   if (!hasExplicitScope) {
     throw new Error(
-      `No exact installable source found for ${identifier}. Use \`flget search ${identifier}\` to inspect partial matches or provide --source <scoop|npm|ghr|npmgh|skill>.`,
+      `No exact installable source found for ${identifier}. Use \`flget search ${identifier}\` to inspect partial matches or provide --source <scoop|npm|ghr|npmgh|skill|depot>.`,
     );
   }
 
   const matches = filterInstallMatches(
     await findSearchMatches(context, scopedQuery, {
-      includeRoots: false,
       includeSkills: options.source === "skill",
     }),
     options.source,

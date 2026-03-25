@@ -1,6 +1,7 @@
 import { loadContext } from "./core/context";
 import { runBucketCommand } from "./commands/bucket";
 import { runCacheCommand } from "./commands/cache";
+import { runServeCommand } from "./commands/serve";
 import { runConfigCommand } from "./commands/config";
 import { runEnvCommand } from "./commands/env";
 import { runFundCommand } from "./commands/fund";
@@ -10,7 +11,7 @@ import { runListCommand } from "./commands/list";
 import { runRegistryCommand } from "./commands/registry";
 import { runResetCommand } from "./commands/reset";
 import { runRemoveCommand } from "./commands/remove";
-import { runRootCommand } from "./commands/root";
+import { runDepotCommand } from "./commands/depot";
 import { runRepairCommand } from "./commands/repair";
 import { runSearchCommand } from "./commands/search";
 import { runSkillsCommand } from "./commands/skills";
@@ -38,7 +39,8 @@ Usage:
   flget config <show|create>
   flget cache refresh
   flget repair [package]
-  flget offline-root <add|remove|list|first|last> ...
+  flget depot <add|remove|list|first|last> ...
+  flget serve [--port <port>] [--host <host>]
   flget bucket <add|remove|list|update> ...
   flget compat <list|add|remove|update> ...
 
@@ -59,6 +61,7 @@ Sources:
   npm:<name>[@version]
   npmgh:<owner>/<repo>[@ref]
   skill:<owner>/<repo>[@ref][#subpath]
+  depot:<id>
 
 Global options:
   --help, -h
@@ -97,7 +100,7 @@ interface RuntimeCommandSpec extends CommandSpecBase {
 type CommandSpec = NoContextCommandSpec | RuntimeCommandSpec;
 
 const ARCH_VALUES = ["64bit", "32bit", "arm64"] as const satisfies readonly Arch[];
-const INSTALL_SOURCE_VALUES = ["scoop", "npm", "ghr", "npmgh", "skill"] as const satisfies readonly InstallSource[];
+const INSTALL_SOURCE_VALUES = ["scoop", "npm", "ghr", "npmgh", "skill", "depot"] as const satisfies readonly InstallSource[];
 
 function defineNoContextCommand(spec: Omit<NoContextCommandSpec, "kind">): NoContextCommandSpec {
   return {
@@ -163,10 +166,10 @@ const COMMANDS: CommandSpec[] = [
     },
   }),
   defineRuntimeCommand({
-    name: "offline-root",
+    name: "depot",
     contextMode: "create",
     async run(parsed, _installOptions, context) {
-      await runRootCommand(context, parsed.positional);
+      await runDepotCommand(context, parsed.positional);
     },
   }),
   defineRuntimeCommand({
@@ -195,6 +198,13 @@ const COMMANDS: CommandSpec[] = [
     name: "cache",
     async run(parsed, _installOptions) {
       await runCacheCommand(parsed.positional);
+    },
+  }),
+  defineRuntimeCommand({
+    name: "serve",
+    contextMode: "existing",
+    async run(parsed, _installOptions, context) {
+      await runServeCommand(context.root, parsed);
     },
   }),
   defineRuntimeCommand({
