@@ -169,6 +169,20 @@ try {
   } finally {
     $static.job, $github.job | Remove-Job -Force -ErrorAction SilentlyContinue
   }
+
+  $s = New-Scenario "depot-local-workflow"
+  $static = Start-Mock "static-file-server" "$($s.root)\static-ready.json" @("--root", "$($s.root)\server", "--port", "$($s.port)")
+  try {
+    Use-Env $s.setup.env {
+      & "$e2eRoot\depot-local-workflow.flow.ps1" `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
+        -ExpectedVersionOutput $expectedVersion `
+        -DepotRoot $s.setup.depotRoot
+    }
+  } finally {
+    $static.job | Remove-Job -Force -ErrorAction SilentlyContinue
+  }
 } finally {
   Remove-Item $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

@@ -4,6 +4,7 @@ import { skillGithubSource } from "./skill-github";
 import { scoopSource } from "./scoop";
 import { npmSource } from "./npm";
 import { npmGithubSource } from "./npm-github";
+import { depotSource } from "./depot";
 
 export const resolvers = [
   githubReleaseSource,
@@ -11,4 +12,5 @@ export const resolvers = [
   scoopSource,
   npmSource,
   npmGithubSource,
+  depotSource,
 ] satisfies readonly AnySourceResolver[];
