@@ -16,7 +16,7 @@ export function getDefaultConfig(): FlgetConfig {
         url: "https://github.com/ScoopInstaller/Main",
       },
     ],
-    roots: [],
+    depots: [],
     compatRegistries: {
       official: [
         "https://github.com/flatina/flget-compat",
@@ -48,6 +48,7 @@ function formatRootConfigToml(config: FlgetConfig): string {
     `ghr = ${config.sources.ghr ? "true" : "false"}`,
     `npmgh = ${config.sources.npmgh ? "true" : "false"}`,
     `skill = ${config.sources.skill ? "true" : "false"}`,
+    `depot = ${config.sources.depot ? "true" : "false"}`,
     "",
     "[compatRegistries]",
     formatStringArray("official", config.compatRegistries.official),
@@ -60,9 +61,9 @@ function formatRootConfigToml(config: FlgetConfig): string {
     lines.push(`url = ${formatString(bucket.url)}`);
   }
 
-  for (const root of config.roots) {
-    lines.push("", "[[roots]]");
-    lines.push(`path = ${formatString(root.path)}`);
+  for (const depot of config.depots) {
+    lines.push("", "[[depots]]");
+    lines.push(`uri = ${formatString(depot.uri)}`);
   }
 
   return `${lines.join("\n")}\n`;
@@ -108,18 +109,29 @@ function parseTomlConfig(content: string): FlgetConfig {
         return [{ name: bucket.name, url: bucket.url }];
       })
       : [],
-    roots: Array.isArray(parsed.roots)
-      ? parsed.roots.flatMap((entry) => {
+    depots: Array.isArray(parsed.depots)
+      ? parsed.depots.flatMap((entry) => {
         if (!entry || typeof entry !== "object") {
           return [];
         }
-        const root = entry as Record<string, unknown>;
-        if (typeof root.path !== "string") {
+        const depot = entry as Record<string, unknown>;
+        if (typeof depot.uri !== "string") {
           return [];
         }
-        return [{ path: root.path }];
+        return [{ uri: depot.uri }];
       })
-      : [],
+      : Array.isArray(parsed.roots)
+        ? parsed.roots.flatMap((entry) => {
+          if (!entry || typeof entry !== "object") {
+            return [];
+          }
+          const root = entry as Record<string, unknown>;
+          if (typeof root.path !== "string") {
+            return [];
+          }
+          return [{ uri: root.path }];
+        })
+        : [],
     compatRegistries: {
       official: ensureStringArray(compatRegistries?.official),
       community: ensureStringArray(compatRegistries?.community),

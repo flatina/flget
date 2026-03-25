@@ -7,6 +7,7 @@ export const DEFAULT_SOURCE_ENABLEMENT: SourceEnablementConfig = {
   ghr: true,
   npmgh: true,
   skill: true,
+  depot: true,
 };
 
 export function normalizeSourceEnablement(value: unknown): SourceEnablementConfig {
@@ -17,6 +18,7 @@ export function normalizeSourceEnablement(value: unknown): SourceEnablementConfi
     ghr: parsed.ghr !== false,
     npmgh: parsed.npmgh !== false,
     skill: parsed.skill !== false,
+    depot: parsed.depot !== false,
   };
 }
 

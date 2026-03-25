@@ -16,6 +16,7 @@ export type SourceRefByType = {
   "github-release": `ghr:${string}`;
   "npm-github": `npmgh:${string}`;
   "skill-github": `skill:${string}`;
+  depot: `depot:${string}`;
 };
 export type SourceRef<TSourceType extends SourceType = SourceType> = SourceRefByType[TSourceType];
 export type TransactionOperation = "install" | "update" | "remove";
@@ -36,7 +37,7 @@ export interface FlgetConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   sources: SourceEnablementConfig;
   buckets: BucketConfig[];
-  roots: RootConfig[];
+  depots: DepotConfig[];
   compatRegistries: {
     official: string[];
     community: string[];
@@ -51,8 +52,8 @@ export interface BucketConfig {
   url: string;
 }
 
-export interface RootConfig {
-  path: string;
+export interface DepotConfig {
+  uri: string;
 }
 
 export interface FlgetDirs extends Record<SourceDirsKey, string> {
@@ -100,6 +101,10 @@ interface PackageMetaBase<TSourceType extends SourceType = SourceType> {
   warnings: string[];
   notes?: string | null;
   tags?: string[];
+  depotOrigin?: {
+    sourceType: string;
+    sourceRef: string;
+  };
 }
 
 export interface AppPackageMeta<TSourceType extends AppSourceType = AppSourceType> extends PackageMetaBase<TSourceType> {
@@ -215,6 +220,10 @@ interface PreparedPackageBase {
   envSet?: Record<string, string>;
   warnings: string[];
   notes?: string | null;
+  depotOrigin?: {
+    sourceType: string;
+    sourceRef: string;
+  };
 }
 
 export interface PreparedAppPackage extends PreparedPackageBase {
