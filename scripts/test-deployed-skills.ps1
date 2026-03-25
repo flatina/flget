@@ -25,7 +25,7 @@ try {
   & $deployScript -RootPath $deployRoot -SkipBuild:$SkipBuild
 
   $expectedShim = Join-Path $deployRoot "shims\$skillShim.cmd"
-  $expectedSkillRoot = Join-Path $deployRoot "agents\skills\$skillId\current"
+  $expectedSkillRoot = Join-Path $deployRoot "gh\skills\$skillId\current"
 
   Push-Location $deployRoot
   try {

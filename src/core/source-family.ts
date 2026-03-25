@@ -32,14 +32,14 @@ export const SOURCE_FAMILIES = [
     sourceType: "npm-github",
     cliSource: "npmgh",
     installKind: "app",
-    rootDirSegments: ["npmgh"],
+    rootDirSegments: ["gh", "npm"],
     dirsKey: "npmgh",
   },
   {
     sourceType: "skill-github",
     cliSource: "skill",
     installKind: "skill",
-    rootDirSegments: ["agents", "skills"],
+    rootDirSegments: ["gh", "skills"],
     dirsKey: "skills",
   },
 ] as const satisfies readonly SourceFamilySpec[];
