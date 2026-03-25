@@ -22,8 +22,8 @@ export async function runEnvCommand(context: RuntimeContext, options: EnvOptions
     if (config.buckets.length > 0) {
       lines.push(`buckets = ${tomlArray(config.buckets.map((b) => b.name))}`);
     }
-    if (config.roots.length > 0) {
-      lines.push(`offline_roots = ${tomlArray(config.roots.map((r) => r.path))}`);
+    if (config.depots.length > 0) {
+      lines.push(`depots = ${tomlArray(config.depots.map((d) => d.uri))}`);
     }
     lines.push(`xdg_config = ${quoteToml(rel(dirs.xdgConfig))}`);
     lines.push(`xdg_data = ${quoteToml(rel(dirs.xdgData))}`);
@@ -41,8 +41,8 @@ export async function runEnvCommand(context: RuntimeContext, options: EnvOptions
   if (config.buckets.length > 0) {
     console.log(`FL_BUCKETS=${config.buckets.map((b) => b.name).join(",")}`);
   }
-  if (config.roots.length > 0) {
-    console.log(`FL_OFFLINE_ROOTS=${config.roots.map((r) => r.path).join(",")}`);
+  if (config.depots.length > 0) {
+    console.log(`FL_DEPOTS=${config.depots.map((d) => d.uri).join(",")}`);
   }
   console.log(`FL_XDG_CONFIG=${rel(dirs.xdgConfig)}`);
   console.log(`FL_XDG_DATA=${rel(dirs.xdgData)}`);

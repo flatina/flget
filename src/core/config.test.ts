@@ -14,6 +14,7 @@ describe("config source enablement", () => {
       ghr: true,
       npmgh: true,
       skill: true,
+      depot: true,
     });
     expect(defaultConfig.compatRegistries.official).toEqual([
       "https://github.com/flatina/flget-compat",
@@ -27,6 +28,7 @@ describe("config source enablement", () => {
       ghr: true,
       npmgh: true,
       skill: true,
+      depot: true,
     });
   });
 
@@ -44,6 +46,7 @@ describe("config source enablement", () => {
       ghr: false,
       npmgh: true,
       skill: false,
+      depot: true,
     });
   });
 });

@@ -42,6 +42,13 @@ export const SOURCE_FAMILIES = [
     rootDirSegments: ["gh", "skills"],
     dirsKey: "skills",
   },
+  {
+    sourceType: "depot",
+    cliSource: "depot",
+    installKind: "app",
+    rootDirSegments: ["depot"],
+    dirsKey: "depot",
+  },
 ] as const satisfies readonly SourceFamilySpec[];
 
 export type SourceFamily = typeof SOURCE_FAMILIES[number];
