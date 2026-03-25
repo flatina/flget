@@ -86,12 +86,12 @@ export function inferPackageLocationFromRelativeParts(parts: string[]): {
     if (rootDirSegments.some((segment, index) => parts[index] !== segment)) {
       continue;
     }
-    const id = parts[rootDirSegments.length];
-    if (!id) {
+    const idParts = parts.slice(rootDirSegments.length, -1);
+    if (idParts.length === 0) {
       continue;
     }
     return {
-      id,
+      id: idParts.join("/"),
       sourceType: family.sourceType,
       installKind: family.installKind,
     };
