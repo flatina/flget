@@ -233,7 +233,7 @@ function Invoke-BucketBootstrap {
 function Invoke-CompatBootstrap {
   param([string]$Root)
 
-  $compatDir = Join-Path $Root "compat\official"
+  $compatDir = Join-Path $Root "gh\compat\official"
   if ((Test-Path $compatDir) -and (Get-ChildItem -LiteralPath $compatDir -Filter "*.tar.gz" -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
     return
   }

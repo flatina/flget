@@ -10,7 +10,6 @@ export const ROOT_SHARED_SECRETS_NAME = ".env";
 
 export function getDirs(root: string): FlgetDirs {
   const resolvedRoot = resolve(root);
-  const compat = join(resolvedRoot, "compat");
   const xdg = join(resolvedRoot, "xdg");
   const flgetState = join(xdg, ".local", "state", "flget");
   const flgetCache = join(xdg, ".cache", "flget");
@@ -28,10 +27,10 @@ export function getDirs(root: string): FlgetDirs {
     staging: flgetState,
     downloads: flgetCache,
     transactions: join(flgetState, "transactions"),
-    compat,
-    compatLocal: join(compat, "local"),
-    compatOfficial: join(compat, "official"),
-    compatCommunity: join(compat, "community"),
+    compat: join(resolvedRoot, "gh", "compat"),
+    compatLocal: join(xdg, ".config", "flget", "compat"),
+    compatOfficial: join(resolvedRoot, "gh", "compat", "official"),
+    compatCommunity: join(resolvedRoot, "gh", "compat", "community"),
     bunExe: join(resolvedRoot, "bun.exe"),
     cliJs: join(resolvedRoot, "flget.js"),
     cliMap: join(resolvedRoot, "flget.js.map"),
