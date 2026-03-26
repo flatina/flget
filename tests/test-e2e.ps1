@@ -181,6 +181,22 @@ try {
   } finally {
     $static.job | Remove-Job -Force -ErrorAction SilentlyContinue
   }
+
+  $s = New-Scenario "depot-serve-workflow"
+  $static = Start-Mock "static-file-server" "$($s.root)\static-ready.json" @("--root", "$($s.root)\server", "--port", "$($s.port)")
+  $depotServePort = Get-FreePort
+  try {
+    Use-Env $s.setup.env {
+      & "$e2eRoot\depot-serve-workflow.flow.ps1" `
+        -BaseUrl $s.setup.baseUrl `
+        -InstallRoot $s.setup.installRoot `
+        -ExpectedVersionOutput $expectedVersion `
+        -DepotRoot $s.setup.depotRoot `
+        -DepotServePort $depotServePort
+    }
+  } finally {
+    $static.job | Remove-Job -Force -ErrorAction SilentlyContinue
+  }
 } finally {
   Remove-Item $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
