@@ -395,10 +395,10 @@
               and Bun-friendly workflows.
             </p>
             <p>
-              Use <code>scoop</code>, <code>npm</code>, <code>ghr</code>, and <code>npmgh</code>
-              sources from the same root, then install agent skills with
-              <code>flget skills ...</code> and generate shims for declared built-in
-              <code>.ts</code> entry scripts.
+              Use <code>scoop</code>, <code>npm</code>, <code>ghr</code>, <code>npmgh</code>,
+              and <code>depot</code> sources from the same root. Share packages across machines
+              with <code>flget serve</code>, and install agent skills with
+              <code>flget skills ...</code>.
             </p>
           </div>
           <div class="chip-row" aria-label="Key properties">
@@ -417,8 +417,8 @@
             <p>Built for portable drives, optical media, and multiple isolated roots.</p>
           </div>
           <div class="fact-card">
-            <strong>Offline roots</strong>
-            <p>Reuse an existing flget root as a local source when you need an air-gapped or partially offline setup.</p>
+            <strong>Depot sharing</strong>
+            <p>Share packages across machines with <code>flget serve</code> or add local/remote depots as install sources.</p>
           </div>
           <div class="fact-card">
             <strong>Scope</strong>
@@ -519,26 +519,22 @@ flget skills install flatina/cowsay-ts <span class="tok-comment"># install an ag
         <article class="card reveal delay-3">
           <div class="stack">
             <div class="stack">
-              <p class="kicker">Offline Roots</p>
-              <h2>Reuse an existing root as a source</h2>
+              <p class="kicker">Depot</p>
+              <h2>Distributed package sharing</h2>
               <p>
-                In air-gapped environments, copying the entire root directory is usually enough.
-                If you only need a fresh shell plus local package reuse, copy the root files and
-                add an existing root as a source.
+                Any flget root can serve as a package source for others. Add local directories
+                or remote HTTP depots, then install with <code>depot:</code> prefix.
               </p>
             </div>
-            <pre><code>mkdir &lt;some_directory&gt;
-copy K:\flget\*.* &lt;some_directory&gt;   <span class="tok-comment"># copy only root files, not recursive</span>
+            <pre><code><span class="tok-comment"># Share your root as an HTTP depot</span>
+flget serve --host 0.0.0.0 --port 8080
 
-<span class="tok-comment"># Add the directory root as a source</span>
-cd &lt;some_directory&gt;
-flget root add K:\flget
-flget root list
-flget root first K:\flget   <span class="tok-comment"># highest priority</span>
-flget root last K:\flget    <span class="tok-comment"># lowest priority</span>
-flget root remove K:\flget
+<span class="tok-comment"># Add depots (local or remote)</span>
+flget depot add K:\flget
+flget depot add http://10.0.0.5:8080
 
-flget install 7zip --source scoop</code></pre>
+<span class="tok-comment"># Install from depot</span>
+flget install depot:7zip</code></pre>
           </div>
         </article>
 
