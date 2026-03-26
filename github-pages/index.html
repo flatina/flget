@@ -6,7 +6,7 @@
   <link rel="canonical" href="https://flatina.github.io/flget/">
   <meta
     name="description"
-    content="flget is a Windows-first, portable-first package manager with directory-isolated installs, rename-based updates, and support for scoop, npm, GitHub Releases, npmgh, and agent skills."
+    content="flget is a Windows-first, portable-first package manager with directory-isolated installs, rename-based updates, and support for scoop, npm, GitHub Releases, npmgh, skills, and depot (distributed sharing)."
   >
   <title>flget by flatina</title>
   <style>
@@ -506,6 +506,10 @@ flget skills install flatina/cowsay-ts <span class="tok-comment"># install an ag
             <div class="source-card">
               <strong>skills</strong>
               <p>Store skill installs under <code>gh/skills/</code> and create shims for built-in <code>.ts</code> entry scripts declared by the skill.</p>
+            </div>
+            <div class="source-card">
+              <strong>depot</strong>
+              <p>Install packages from other flget roots (local or HTTP). Use <code>flget serve</code> to share your root as a depot.</p>
             </div>
           </div>
         </div>
