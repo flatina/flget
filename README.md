@@ -10,7 +10,7 @@
   - No `-g`, no registry writes, no `%PATH%` mutation in core flows
   - Rename-based install/update/persist migration
 - Focused on standalone and Bun-friendly ecosystems
-  - App sources: `scoop`, `npm`, `ghr`, `npmgh`
+  - App sources: `scoop`, `npm`, `ghr`, `npmgh`, `depot`
 - Agent skills: `flget skills ...` with shims for declared entry scripts
 
 ### ⚠️ Notes
@@ -47,24 +47,27 @@ flget skills install flatina/skills --skill cowsay-ts # install one skill from a
 - Update flget itself with `flget update` or `.\update.ps1`
 - `update.ps1` is a stable Pages entrypoint; flget runtime comes from the latest GitHub release zip and Bun is fetched from the latest official Bun release
 
-## 📁 Directory Root Source
+## 📡 Depot (Distributed Package Source)
 
-- In an air-gapped environment, copying the entire root directory is usually enough
-- If you only want to deploy some packages, use the existing flget root as an offline source
+- Any flget root can serve as a package source for other flget instances
+- Supports both local directories and remote HTTP depots
+- Packages installed from a depot are stored as `sourceType: "depot"`
 
 ```powershell
-mkdir <some_directory>
-copy K:\flget\*.* <some_directory>   # copy only root files, not recursive
+# Add a depot (local or remote)
+flget depot add K:\flget
+flget depot add http://10.0.0.5:8080
+flget depot list
+flget depot first K:\flget
+flget depot remove K:\flget
 
-# Add the directory root as a source
-cd <some_directory>
-flget offline-root add K:\flget
-flget offline-root list
-flget offline-root first K:\flget   # highest priority
-flget offline-root last K:\flget    # lowest priority
-flget offline-root remove K:\flget
+# Install from depot
+flget install depot:7zip
+flget install 7zip --source depot
+flget search 7zip --source depot
 
-flget install 7zip --source scoop
+# Serve your root as a depot
+flget serve --host 0.0.0.0 --port 8080
 ```
 
 ## 🔐 Secrets
@@ -134,6 +137,10 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
         flget.meta.json
         current/
         <version>/		# reusable local source
+  depot/
+    <package-id>/
+      flget.meta.json
+      current/
   buckets/
   shims/
     bun.cmd
@@ -166,7 +173,8 @@ flget env [--toml]
 flget config <show|create>
 flget cache refresh
 flget repair [package]
-flget offline-root <add|remove|list|first|last> ...
+flget depot <add|remove|list|first|last> ...
+flget serve [--port <port>] [--host <host>]
 flget bucket <add|remove|list|update> ...
 flget compat <list|add|remove|update> ...
 
@@ -187,6 +195,7 @@ flget install scoop:cowsay
 flget install ghr:servo/servo
 flget install npm:cowsay@1.5.0
 flget install npmgh:piuccio/cowsay
+flget install depot:7zip
 # same app id from multiple sources: last installed wins
 # switch winner: flget reset cowsay --source scoop
 
@@ -218,7 +227,7 @@ FL_SHIMS_DIR=shims
 FL_CONFIG_FILE=flget.root.toml
 FL_SOURCES=scoop,ghr,npm,npmgh
 FL_BUCKETS=main
-FL_OFFLINE_ROOTS=K:\flget
+FL_DEPOTS=K:\flget
 FL_XDG_CONFIG=xdg/.config
 FL_XDG_DATA=xdg/.local/share
 FL_XDG_STATE=xdg/.local/state
@@ -231,7 +240,7 @@ shims_dir = "shims"
 config_file = "flget.root.toml"
 sources = ["scoop", "ghr", "npm", "npmgh"]
 buckets = ["main"]
-offline_roots = ["K:\\flget"]
+depots = ["K:\\flget"]
 xdg_config = "xdg/.config"
 xdg_data = "xdg/.local/share"
 xdg_state = "xdg/.local/state"
