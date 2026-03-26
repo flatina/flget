@@ -198,21 +198,37 @@ function Initialize-BaseInstallEnvironment {
     Copy-Item -LiteralPath $entry.Value -Destination (Join-Path $assetsRoot $entry.Key) -Force
   }
 
-  $bucketRepoPath = Join-Path $resolvedServerRoot "bucket-main"
-  $fldemoAssetPath = Join-Path $assetsRoot "fldemo.cmd"
-  Initialize-GitRepo -RepoPath $bucketRepoPath -Files @{
-    "bucket/fldemo.json" = (New-ScoopManifestJson `
-      -Version "1.0.0" `
-      -Url "$normalizedBaseUrl/assets/fldemo.cmd" `
-      -Hash (Get-Sha256Hex $fldemoAssetPath) `
-      -Target "fldemo.cmd" `
-      -ShimName "fldemo") + "`n"
-  }
+  $stateRoot = Join-Path $resolvedServerRoot "state"
+  Ensure-Directory $stateRoot
 
-  $compatRepoPath = Join-Path $resolvedServerRoot "compat"
-  Initialize-GitRepo -RepoPath $compatRepoPath -Files @{
-    "README.md" = "# flget-compat`n"
-  }
+  $bucketStageRoot = Join-Path $resolvedServerRoot "bucket-main-stage"
+  $fldemoAssetPath = Join-Path $assetsRoot "fldemo.cmd"
+  $bucketManifestDir = Join-Path $bucketStageRoot "Main-HEAD\bucket"
+  Ensure-Directory $bucketManifestDir
+  Write-Utf8NoBom -Path (Join-Path $bucketManifestDir "fldemo.json") -Content ((New-ScoopManifestJson `
+    -Version "1.0.0" `
+    -Url "$normalizedBaseUrl/assets/fldemo.cmd" `
+    -Hash (Get-Sha256Hex $fldemoAssetPath) `
+    -Target "fldemo.cmd" `
+    -ShimName "fldemo") + "`n")
+  $bucketTarball = Join-Path $stateRoot "bucket-main.tar.gz"
+  New-TarGzArchive -StageRoot (Join-Path $bucketStageRoot "Main-HEAD") -ArchivePath $bucketTarball
+
+  $compatStageRoot = Join-Path $resolvedServerRoot "compat-stage"
+  $compatContentDir = Join-Path $compatStageRoot "flget-compat-HEAD"
+  Ensure-Directory (Join-Path $compatContentDir "overrides")
+  Write-Utf8NoBom -Path (Join-Path $compatContentDir "README.md") -Content "# flget-compat`n"
+  $compatTarball = Join-Path $stateRoot "compat.tar.gz"
+  New-TarGzArchive -StageRoot $compatContentDir -ArchivePath $compatTarball
+
+  # Pre-place bucket/compat tarballs so bootstrap doesn't need GitHub API
+  $installBucketDir = Join-Path $resolvedInstallRoot "gh\buckets"
+  Ensure-Directory $installBucketDir
+  Copy-Item -LiteralPath $bucketTarball -Destination (Join-Path $installBucketDir "main.tar.gz") -Force
+
+  $installCompatDir = Join-Path $resolvedInstallRoot "compat\official"
+  Ensure-Directory $installCompatDir
+  Copy-Item -LiteralPath $compatTarball -Destination (Join-Path $installCompatDir "github-com-flatina-flget-compat.tar.gz") -Force
 
   $releaseMetadata = New-ReleaseMetadataJson -Tag $ExpectedReleaseTag -ArchiveUrl "$normalizedBaseUrl/downloads/flget-win-x64.zip"
   Write-Utf8NoBom -Path (Join-Path $releaseMetaLatestRoot "latest") -Content $releaseMetadata
@@ -223,18 +239,13 @@ function Initialize-BaseInstallEnvironment {
     installRoot = $resolvedInstallRoot
     serverRoot = $resolvedServerRoot
     assetsRoot = $assetsRoot
-    bucketMainRepoPath = $bucketRepoPath
-    compatRepoPath = $compatRepoPath
+    bucketTarball = $bucketTarball
+    compatTarball = $compatTarball
     env = @{
       FLGET_RELEASE_API_BASE_URL = $normalizedBaseUrl
       FLGET_RELEASE_OWNER = "flatina"
       FLGET_RELEASE_REPO = "flget"
       FLGET_BUN_DOWNLOAD_BASE_URL = "$normalizedBaseUrl/bun"
-      GIT_CONFIG_COUNT = "2"
-      GIT_CONFIG_KEY_0 = "url.$(Get-FileUri $bucketRepoPath).insteadOf"
-      GIT_CONFIG_VALUE_0 = "https://github.com/ScoopInstaller/Main"
-      GIT_CONFIG_KEY_1 = "url.$(Get-FileUri $compatRepoPath).insteadOf"
-      GIT_CONFIG_VALUE_1 = "https://github.com/flatina/flget-compat"
     }
   }
 }

@@ -217,6 +217,11 @@ function Invoke-EnvRefresh {
 function Invoke-BucketBootstrap {
   param([string]$Root)
 
+  $bucketDir = Join-Path $Root "gh\buckets"
+  if ((Test-Path $bucketDir) -and (Get-ChildItem -LiteralPath $bucketDir -Filter "*.tar.gz" -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    return
+  }
+
   $bunExe = Join-Path $Root "bun.exe"
   $cliPath = Join-Path $Root "flget.js"
   & $bunExe $cliPath bucket update | Out-Null
@@ -227,6 +232,11 @@ function Invoke-BucketBootstrap {
 
 function Invoke-CompatBootstrap {
   param([string]$Root)
+
+  $compatDir = Join-Path $Root "compat\official"
+  if ((Test-Path $compatDir) -and (Get-ChildItem -LiteralPath $compatDir -Filter "*.tar.gz" -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    return
+  }
 
   $bunExe = Join-Path $Root "bun.exe"
   $cliPath = Join-Path $Root "flget.js"

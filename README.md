@@ -137,11 +137,12 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
         flget.meta.json
         current/
         <version>/		# reusable local source
+    buckets/
+      main.tar.gz         # scoop bucket tarball (no git required)
   depot/
     <package-id>/
       flget.meta.json
       current/
-  buckets/
   shims/
     bun.cmd
     bun.ps1
@@ -307,7 +308,7 @@ CODEX_HOME = '${FL_ROOT}\.codex'
 - Update the root runtime files
   - Run `flget update` or `.\update.ps1`.
 - Fresh root cannot search Scoop packages
-  - Ensure `git` is available, then run `flget bucket update`.
+  - Run `flget bucket update` to download bucket data.
 - `bun.exe` is missing from the root
   - `flget` tries root, parent, then system `bun`.
 - Same app id exists in multiple sources
