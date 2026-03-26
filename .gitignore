@@ -1,5 +1,0 @@
-.env
-.secrets/
-dist/
-node_modules/
-Thumbs.db
