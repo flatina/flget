@@ -32,9 +32,9 @@ try {
 
     $flgetCommand = Get-Command flget -ErrorAction Stop
     Assert-StartsWithPath $flgetCommand.Source $deployRoot "flget should resolve from the deployed root"
-    $mainBucketPath = Join-Path $deployRoot "buckets\main"
-    if (-not (Test-Path -LiteralPath $mainBucketPath)) {
-      throw "Initial activate should sync the default Scoop bucket: $mainBucketPath"
+    $mainBucketTarball = Join-Path $deployRoot "gh\buckets\main.tar.gz"
+    if (-not (Test-Path -LiteralPath $mainBucketTarball)) {
+      throw "Initial activate should sync the default Scoop bucket: $mainBucketTarball"
     }
 
     Invoke-Checked { & $flgetCommand.Source --version }

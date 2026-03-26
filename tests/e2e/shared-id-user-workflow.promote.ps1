@@ -1,7 +1,7 @@
 param(
   [string]$RepoRoot,
   [string]$BaseUrl,
-  [string]$BucketRepoPath,
+  [string]$InstallRoot,
   [string]$NpmStatePath
 )
 
@@ -18,12 +18,19 @@ $npmState.packages.demo.latest = "2.0.0"
 $npmState.packages.demo.versions["2.0.0"] = $demoV2Archive
 Write-Utf8NoBom -Path $NpmStatePath -Content ($npmState | ConvertTo-Json -Depth 12)
 
-$manifestPath = Join-Path $BucketRepoPath "bucket\demo.json"
-Write-Utf8NoBom -Path $manifestPath -Content ((New-ScoopManifestJson `
+# Recreate the local bucket tarball with v2 manifest
+$stateRoot = Split-Path -Parent $NpmStatePath
+$bucketStageDir = Join-Path $stateRoot "bucket-local-v2-stage\Local-HEAD\bucket"
+Ensure-Directory $bucketStageDir
+Write-Utf8NoBom -Path (Join-Path $bucketStageDir "demo.json") -Content ((New-ScoopManifestJson `
   -Version "2.0.0" `
   -Url "$($BaseUrl.TrimEnd('/'))/assets/demo-v2.cmd" `
   -Hash (Get-Sha256Hex (Join-Path $RepoRoot "tests\assets\scoop\demo-v2.cmd")) `
   -Target "demo-v2.cmd" `
   -ShimName "demo") + "`n")
-& git -C $BucketRepoPath add .
-& git -C $BucketRepoPath commit -m "demo v2" | Out-Null
+$localBucketTarball = Join-Path $stateRoot "bucket-local-v2.tar.gz"
+New-TarGzArchive -StageRoot (Join-Path $stateRoot "bucket-local-v2-stage\Local-HEAD") -ArchivePath $localBucketTarball
+
+# Replace the installed bucket tarball
+$installBucketDir = Join-Path $InstallRoot "gh\buckets"
+Copy-Item -LiteralPath $localBucketTarball -Destination (Join-Path $installBucketDir "local.tar.gz") -Force

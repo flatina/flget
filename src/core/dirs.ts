@@ -23,7 +23,7 @@ export function getDirs(root: string): FlgetDirs {
     npmgh: join(resolvedRoot, "gh", "npm"),
     skills: join(resolvedRoot, "gh", "skills"),
     depot: join(resolvedRoot, "depot"),
-    buckets: join(resolvedRoot, "buckets"),
+    buckets: join(resolvedRoot, "gh", "buckets"),
     shims: join(resolvedRoot, "shims"),
     staging: flgetState,
     downloads: flgetCache,

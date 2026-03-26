@@ -3,7 +3,6 @@ param(
   [string]$InstallRoot,
   [string]$ExpectedVersionOutput,
   [string]$NpmRegistryBaseUrl,
-  [string]$BucketRepoPath,
   [ValidateSet("install", "update")]
   [string]$Phase
 )
@@ -24,7 +23,7 @@ try {
 
     Invoke-Checked { . .\activate.ps1; flget --version } -ExpectContains @($ExpectedVersionOutput)
 
-    Invoke-Checked { . .\activate.ps1; flget bucket add local $BucketRepoPath } -ExpectContains @("Added bucket local")
+    Invoke-Checked { . .\activate.ps1; flget bucket add local https://github.com/test/local } -ExpectContains @("Added bucket local")
 
     Invoke-Checked { . .\activate.ps1; flget install scoop:local/demo } -ExpectContains @("Installed demo@1.0.0")
 

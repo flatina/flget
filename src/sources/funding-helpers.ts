@@ -12,7 +12,6 @@ import {
 } from "../core/funding";
 import { getPackageBaseRelativePath } from "../core/package-layout";
 import type { PackageMeta, RuntimeContext } from "../core/types";
-import { pathExists } from "../utils/fs";
 import { readRuntimeText } from "../utils/runtime";
 import type { PackageJsonAppManifest } from "./package-json-app";
 
@@ -123,15 +122,11 @@ export async function resolveInstalledPackageJsonFunding(
 }
 
 export async function loadScoopManifest(root: string, bucket: string, app: string): Promise<ScoopManifestLike | null> {
-  const bucketRoot = join(root, "buckets", bucket);
-  for (const candidate of [
-    join(bucketRoot, "bucket", `${app}.json`),
-    join(bucketRoot, `${app}.json`),
-  ]) {
-    if (!await pathExists(candidate)) {
-      continue;
-    }
-    return JSON.parse(await readRuntimeText(candidate)) as ScoopManifestLike;
-  }
-  return null;
+  const { getDirs } = await import("../core/dirs");
+  const { readBucketManifest } = await import("../core/bucket-archive");
+  const { readConfig } = await import("../core/config");
+  const dirs = getDirs(root);
+  const config = await readConfig(root);
+  const bucketConfig = config.buckets.find((b) => b.name === bucket);
+  return await readBucketManifest(dirs.buckets, bucket, app, bucketConfig?.url) as ScoopManifestLike | null;
 }

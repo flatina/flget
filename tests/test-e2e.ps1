@@ -127,7 +127,6 @@ try {
         -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion `
         -NpmRegistryBaseUrl $npm.info.baseUrl `
-        -BucketRepoPath $s.setup.bucketRepoPath `
         -Phase install
     }
 
@@ -135,7 +134,7 @@ try {
     & "$e2eRoot\shared-id-user-workflow.promote.ps1" `
       -RepoRoot $repoRoot `
       -BaseUrl $s.setup.baseUrl `
-      -BucketRepoPath $s.setup.bucketRepoPath `
+      -InstallRoot $s.setup.installRoot `
       -NpmStatePath $s.setup.npmStatePath
 
     $npm = Start-Mock "npm-registry-mock" "$($s.root)\npm-ready.json" @("--state", $s.setup.npmStatePath)
@@ -146,7 +145,6 @@ try {
         -InstallRoot $s.setup.installRoot `
         -ExpectedVersionOutput $expectedVersion `
         -NpmRegistryBaseUrl $npm.info.baseUrl `
-        -BucketRepoPath $s.setup.bucketRepoPath `
         -Phase update
     }
   } finally {

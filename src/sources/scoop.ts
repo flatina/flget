@@ -1,5 +1,5 @@
 import { basename, join } from "node:path";
-import { readFile } from "node:fs/promises";
+import { readBucketManifest, type ManifestLike } from "../core/bucket-archive";
 import { resolveArch } from "../core/arch";
 import { downloadToStore } from "../core/download";
 import { applyExtractDir, detectArchiveType, extractInto } from "../core/extract";
@@ -61,17 +61,13 @@ function mergeManifestForArch(manifest: ScoopManifest, arch: Arch): ScoopManifes
   return archManifest ? { ...manifest, ...archManifest } : manifest;
 }
 
-async function findManifestPath(bucketDir: string, app: string): Promise<string> {
-  const candidates = [
-    join(bucketDir, "bucket", `${app}.json`),
-    join(bucketDir, `${app}.json`),
-  ];
-  for (const candidate of candidates) {
-    if (await pathExists(candidate)) {
-      return candidate;
-    }
+async function loadManifest(context: RuntimeContext, bucketName: string, app: string): Promise<ScoopManifest> {
+  const bucket = context.config.buckets.find((b) => b.name === bucketName);
+  const manifest = await readBucketManifest(context.dirs.buckets, bucketName, app, bucket?.url);
+  if (!manifest) {
+    throw new Error(`Manifest not found for ${app} in bucket ${bucketName}`);
   }
-  throw new Error(`Manifest not found for ${app} in ${bucketDir}`);
+  return manifest as unknown as ScoopManifest;
 }
 
 function normalizeBins(bin: ScoopManifest["bin"]): ShimDef[] {
@@ -222,8 +218,7 @@ export const scoopSource: SourceResolver<"scoop", ScoopResolvedExtra> = {
 
     const { sourceRef, bucketName, app } = parsed;
     await syncBucketIfNeeded(context, bucketName);
-    const manifestPath = await findManifestPath(join(context.dirs.buckets, bucketName), app);
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScoopManifest;
+    const manifest = await loadManifest(context, bucketName, app);
     const effectiveManifest = mergeManifestForArch(manifest, resolveArch(options.arch ?? context.config.arch));
 
     return {
@@ -347,7 +342,6 @@ export const scoopSource: SourceResolver<"scoop", ScoopResolvedExtra> = {
       $architecture: resolveArch(options.arch ?? context.config.arch),
       $global: "false",
       $scoopdir: context.root,
-      $bucketsdir: context.dirs.buckets,
       $fname: downloadedFiles[0]?.originalName ?? "",
     };
 

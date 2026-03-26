@@ -32,16 +32,22 @@ $demoV1Archive = Join-Path $stateRoot "demo-1.0.0.tgz"
 New-TarGzArchive -StageRoot (Join-Path $RepoRoot "tests\assets\npm\demo-v1") -ArchivePath $demoV1Archive
 
 $npmStatePath = Join-Path $stateRoot "npm-state.json"
-$bucketRepoPath = Join-Path $ServerRoot "bucket-local"
+# Create a local bucket tarball with extra demo manifest
+$bucketStageDir = Join-Path $stateRoot "bucket-local-stage\Local-HEAD\bucket"
+Ensure-Directory $bucketStageDir
+Write-Utf8NoBom -Path (Join-Path $bucketStageDir "demo.json") -Content ((New-ScoopManifestJson `
+  -Version "1.0.0" `
+  -Url "$BaseUrl/assets/demo-v1.cmd" `
+  -Hash (Get-Sha256Hex (Join-Path $setup.assetsRoot "demo-v1.cmd")) `
+  -Target "demo-v1.cmd" `
+  -ShimName "demo") + "`n")
+$localBucketTarball = Join-Path $stateRoot "bucket-local.tar.gz"
+New-TarGzArchive -StageRoot (Join-Path $stateRoot "bucket-local-stage\Local-HEAD") -ArchivePath $localBucketTarball
 
-Initialize-GitRepo -RepoPath $bucketRepoPath -Files @{
-  "bucket/demo.json" = (New-ScoopManifestJson `
-    -Version "1.0.0" `
-    -Url "$BaseUrl/assets/demo-v1.cmd" `
-    -Hash (Get-Sha256Hex (Join-Path $setup.assetsRoot "demo-v1.cmd")) `
-    -Target "demo-v1.cmd" `
-    -ShimName "demo") + "`n"
-}
+# Place it in the install root as a local bucket
+$installBucketDir = Join-Path $InstallRoot "gh\buckets"
+Ensure-Directory $installBucketDir
+Copy-Item -LiteralPath $localBucketTarball -Destination (Join-Path $installBucketDir "local.tar.gz") -Force
 
 $npmState = @{
   packages = @{
@@ -60,7 +66,6 @@ $result = @{
   baseUrl = $setup.baseUrl
   installRoot = $setup.installRoot
   env = $setup.env
-  bucketRepoPath = $bucketRepoPath
   npmStatePath = $npmStatePath
 }
 

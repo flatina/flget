@@ -20,23 +20,22 @@ function Resolve-FlgetBun {
 }
 
 function Test-BucketBootstrapNeeded {
+  # If bucket tarballs already exist, no bootstrap needed
+  $bucketRoot = Join-Path $PSScriptRoot "gh\buckets"
+  if ((Test-Path -LiteralPath $bucketRoot)) {
+    $bucketFile = Get-ChildItem -LiteralPath $bucketRoot -Filter "*.tar.gz" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -ne $bucketFile) {
+      return $false
+    }
+  }
+
   $configPath = Join-Path $PSScriptRoot "flget.root.toml"
   if (-not (Test-Path -LiteralPath $configPath)) {
     return $true
   }
 
   $hasConfiguredBuckets = Select-String -LiteralPath $configPath -Pattern '^\s*\[\[buckets\]\]\s*$' -Quiet
-  if (-not $hasConfiguredBuckets) {
-    return $false
-  }
-
-  $bucketRoot = Join-Path $PSScriptRoot "buckets"
-  if (-not (Test-Path -LiteralPath $bucketRoot)) {
-    return $true
-  }
-
-  $bucketDir = Get-ChildItem -LiteralPath $bucketRoot -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-  return $null -eq $bucketDir
+  return [bool]$hasConfiguredBuckets
 }
 
 $env:FL_ROOT = $PSScriptRoot
@@ -133,11 +132,16 @@ exit $LASTEXITCODE
 '@
 }
 
-if ((Test-Path "$PSScriptRoot\flget.js") -and (Test-BucketBootstrapNeeded)) {
-  & $resolvedBun "$PSScriptRoot\flget.js" env | Out-Null
-  try {
-    & $resolvedBun "$PSScriptRoot\flget.js" bucket update | Out-Null
-  } catch {
+if (Test-Path "$PSScriptRoot\flget.js") {
+  $configPath = Join-Path $PSScriptRoot "flget.root.toml"
+  if (-not (Test-Path -LiteralPath $configPath)) {
+    & $resolvedBun "$PSScriptRoot\flget.js" config create | Out-Null
+  }
+  if (Test-BucketBootstrapNeeded) {
+    try {
+      & $resolvedBun "$PSScriptRoot\flget.js" bucket update | Out-Null
+    } catch {
+    }
   }
 }
 
