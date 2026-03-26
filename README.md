@@ -101,6 +101,33 @@ GITHUB_TOKEN=FLENC[v1,cipher:AES256_GCM,kdf:scrypt,n:16384,r:8,p:1,salt:...,iv:.
 
 If you need stronger key management, sharing, rotation, or auditability, use `SOPS` and inject secrets into process env before running `flget`
 
+## 🧩 Compatibility Overrides
+
+- Official overrides: https://github.com/flatina/flget-compat (PRs welcome)
+- User overrides are stored in `xdg/.config/flget/compat/`
+- Lookup order: user overrides > official > community
+
+```powershell
+# Create a user override for a GitHub Release package
+mkdir xdg\.config\flget\compat\overrides\github-release
+```
+
+```toml
+# xdg/.config/flget/compat/overrides/github-release/owner--repo.toml
+[[bin]]
+name = "my-tool"
+target = "my-tool.exe"
+
+[env]
+TOOL_HOME = '${FL_ROOT}\.tool'
+```
+
+```toml
+# xdg/.config/flget/compat/overrides/npm/openai--codex.toml
+[env]
+CODEX_HOME = '${FL_ROOT}\.codex'
+```
+
 ## 🗂️ Initialized Directory Structure
 
 ```text
@@ -139,6 +166,9 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
         <version>/		# reusable local source
     buckets/
       main.tar.gz         # scoop bucket tarball (no git required)
+    compat/
+      official/           # compat registry tarballs
+      community/
   depot/
     <package-id>/
       flget.meta.json
@@ -150,6 +180,8 @@ If you need stronger key management, sharing, rotation, or auditability, use `SO
     flget.ps1
   xdg/
     .config/              # XDG_CONFIG_HOME (set by activate.ps1)
+      flget/
+        compat/           # user-editable compat overrides
     .local/
       share/              # XDG_DATA_HOME
       state/              # XDG_STATE_HOME
@@ -287,18 +319,6 @@ shims:
     name: my-cowsay
     runner: bun
 ---
-```
-
-## 🧩 Compatibility Overrides
-
-- Official compatibility overrides repository:
-  - https://github.com/flatina/flget-compat
-  - PRs welcome.
-
-```toml
-# overrides/npm/openai--codex.toml
-[env]
-CODEX_HOME = '${FL_ROOT}\.codex'
 ```
 
 ## 🛠️ Troubleshooting

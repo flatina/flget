@@ -226,7 +226,7 @@ function Initialize-BaseInstallEnvironment {
   Ensure-Directory $installBucketDir
   Copy-Item -LiteralPath $bucketTarball -Destination (Join-Path $installBucketDir "main.tar.gz") -Force
 
-  $installCompatDir = Join-Path $resolvedInstallRoot "compat\official"
+  $installCompatDir = Join-Path $resolvedInstallRoot "gh\compat\official"
   Ensure-Directory $installCompatDir
   Copy-Item -LiteralPath $compatTarball -Destination (Join-Path $installCompatDir "github-com-flatina-flget-compat.tar.gz") -Force
 
