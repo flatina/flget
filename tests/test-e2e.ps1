@@ -62,7 +62,6 @@ function New-Scenario([string]$name) {
     -ServerRoot "$root\server" `
     -InstallRoot "$root\installed" `
     -BaseUrl "http://127.0.0.1:$port" `
-    -ExpectedReleaseTag "v$version" `
     -BunExePath $bunExe `
     -OutFile "$root\setup.json"
 

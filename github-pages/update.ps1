@@ -3,8 +3,7 @@ param(
   [string]$BaseUrl = "https://flatina.github.io/flget",
   [string]$RootPath,
   [switch]$ApplyDownloadedUpdate,
-  [switch]$ExternalBun,
-  [string]$ReleaseTag
+  [switch]$ExternalBun
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,119 +29,15 @@ function Ensure-Directory {
   }
 }
 
-function Get-ReleaseArchiveName {
+
+
+function Get-BunDownloadName {
   $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
   switch ($arch.ToString()) {
-    "Arm64" { return "flget-win-arm64.zip" }
-    "X64" { return "flget-win-x64.zip" }
-    default { throw "Unsupported Windows architecture: $arch" }
+    "Arm64" { return "bun-arm64.exe" }
+    "X64" { return "bun.exe" }
+    default { throw "Unsupported architecture: $arch" }
   }
-}
-
-function Get-BunAssetName {
-  $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
-  switch ($arch.ToString()) {
-    "Arm64" { return "bun-windows-aarch64.zip" }
-    "X64" { return "bun-windows-x64.zip" }
-    default { throw "Unsupported Windows architecture: $arch" }
-  }
-}
-
-function Get-ReleaseApiBaseUrl {
-  if ($env:FLGET_RELEASE_API_BASE_URL) {
-    return $env:FLGET_RELEASE_API_BASE_URL.TrimEnd("/")
-  }
-  return "https://api.github.com"
-}
-
-function Get-ReleaseOwner {
-  if ($env:FLGET_RELEASE_OWNER) {
-    return $env:FLGET_RELEASE_OWNER
-  }
-  return "flatina"
-}
-
-function Get-ReleaseRepo {
-  if ($env:FLGET_RELEASE_REPO) {
-    return $env:FLGET_RELEASE_REPO
-  }
-  return "flget"
-}
-
-function Get-BunDownloadBaseUrl {
-  if ($env:FLGET_BUN_DOWNLOAD_BASE_URL) {
-    return $env:FLGET_BUN_DOWNLOAD_BASE_URL.TrimEnd("/")
-  }
-  return "https://github.com/oven-sh/bun/releases/latest/download"
-}
-
-function Get-ReleaseHeaders {
-  $headers = @{
-    "Accept" = "application/vnd.github+json"
-    "User-Agent" = "flget-update-script"
-  }
-
-  $token = if ($env:FLGET_GITHUB_TOKEN) {
-    $env:FLGET_GITHUB_TOKEN
-  } elseif ($env:GITHUB_TOKEN) {
-    $env:GITHUB_TOKEN
-  } else {
-    $null
-  }
-
-  if ($token) {
-    $headers["Authorization"] = "Bearer $token"
-  }
-
-  return $headers
-}
-
-function Get-ReleaseMetadata {
-  param([string]$Tag)
-
-  $ProgressPreference = "SilentlyContinue"
-  $apiBase = Get-ReleaseApiBaseUrl
-  $owner = Get-ReleaseOwner
-  $repo = Get-ReleaseRepo
-  $releasePath = if ($Tag) {
-    "/repos/$owner/$repo/releases/tags/$([System.Uri]::EscapeDataString($Tag))"
-  } else {
-    "/repos/$owner/$repo/releases/latest"
-  }
-
-  return Invoke-RestMethod -Uri "$apiBase$releasePath" -Headers (Get-ReleaseHeaders)
-}
-
-function Get-ReleaseAssetUrl {
-  param(
-    [object]$Release,
-    [string]$Name
-  )
-
-  if (-not $Release -or -not $Release.assets) {
-    return $null
-  }
-
-  $asset = $Release.assets | Where-Object { $_.name -eq $Name } | Select-Object -First 1
-  if (-not $asset) {
-    return $null
-  }
-
-  return [string]$asset.browser_download_url
-}
-
-function Get-RequiredReleaseAssetUrl {
-  param(
-    [object]$Release,
-    [string]$Name
-  )
-
-  $assetUrl = Get-ReleaseAssetUrl -Release $Release -Name $Name
-  if (-not $assetUrl) {
-    $releaseLabel = if ($Release -and $Release.tag_name) { $Release.tag_name } else { "requested release" }
-    throw "Required release asset not found in ${releaseLabel}: $Name"
-  }
-  return $assetUrl
 }
 
 function Download-File {
@@ -154,29 +49,7 @@ function Download-File {
   Invoke-WebRequest -Uri $Url -OutFile $OutFile
 }
 
-function Expand-ArchiveSilent {
-  param(
-    [string]$Path,
-    [string]$DestinationPath
-  )
-  $ProgressPreference = "SilentlyContinue"
-  Expand-Archive -LiteralPath $Path -DestinationPath $DestinationPath -Force
-}
 
-function Expand-BunRuntime {
-  param(
-    [string]$ArchivePath,
-    [string]$DestinationPath
-  )
-
-  $extractRoot = Join-Path $DestinationPath "bun-runtime"
-  Expand-ArchiveSilent -Path $ArchivePath -DestinationPath $extractRoot
-  $bunExe = Get-ChildItem -Path $extractRoot -Filter "bun.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
-  if (-not $bunExe) {
-    throw "bun.exe not found in downloaded Bun archive"
-  }
-  Copy-Item -LiteralPath $bunExe -Destination (Join-Path $DestinationPath "bun.exe") -Force
-}
 
 function Invoke-WithRetry {
   param(
@@ -287,14 +160,13 @@ if (-not $ApplyDownloadedUpdate) {
   Write-Step "Downloading latest update script"
   Download-File -Url "$normalizedBaseUrl/update.ps1" -OutFile $latestScript
 
-  & $latestScript -RootPath $resolvedRoot -BaseUrl $normalizedBaseUrl -ApplyDownloadedUpdate -ExternalBun:$ExternalBun -ReleaseTag $ReleaseTag
+  & $latestScript -RootPath $resolvedRoot -BaseUrl $normalizedBaseUrl -ApplyDownloadedUpdate -ExternalBun:$ExternalBun
   exit $LASTEXITCODE
 }
 
 $sessionDir = Join-Path $resolvedRoot ("xdg\.local\state\flget\self-update\session-" + (New-SessionId))
 $newDir = Join-Path $sessionDir "new"
 $oldDir = Join-Path $sessionDir "old"
-$archiveExtract = Join-Path $sessionDir "runtime"
 $cleanupSession = $true
 
 Ensure-Directory $newDir
@@ -313,31 +185,17 @@ $movedOld = New-Object System.Collections.Generic.List[string]
 $movedNew = New-Object System.Collections.Generic.List[string]
 
 try {
-  Write-Step "Preparing staged root update under $sessionDir"
-  $release = Get-ReleaseMetadata -Tag $ReleaseTag
-  $releaseLabel = if ($release.tag_name) { $release.tag_name } else { "latest release" }
-  Write-Step "Using flget runtime assets from $releaseLabel"
-
-  $runtimeArchive = Join-Path $sessionDir "flget-runtime.zip"
-  Download-File -Url (Get-RequiredReleaseAssetUrl -Release $release -Name (Get-ReleaseArchiveName)) -OutFile $runtimeArchive
-  Expand-ArchiveSilent -Path $runtimeArchive -DestinationPath $archiveExtract
-
-  if ($useEmbeddedBun) {
-    Write-Step "Downloading latest Bun runtime"
-    $bunArchive = Join-Path $sessionDir "bun-runtime.zip"
-    Download-File -Url "$(Get-BunDownloadBaseUrl)/$(Get-BunAssetName)" -OutFile $bunArchive
-    Expand-BunRuntime -ArchivePath $bunArchive -DestinationPath $newDir
-  }
-
+  Write-Step "Downloading flget runtime files"
   foreach ($name in $rootFiles) {
     if ($name -eq "bun.exe") {
       continue
     }
-    $sourcePath = Join-Path $archiveExtract $name
-    if (-not (Test-Path -LiteralPath $sourcePath)) {
-      throw "Required file missing from release archive: $name"
-    }
-    Move-Item -LiteralPath $sourcePath -Destination (Join-Path $newDir $name) -Force
+    Download-File -Url "$normalizedBaseUrl/downloads/$name" -OutFile (Join-Path $newDir $name)
+  }
+
+  if ($useEmbeddedBun) {
+    Write-Step "Downloading Bun runtime"
+    Download-File -Url "$normalizedBaseUrl/downloads/$(Get-BunDownloadName)" -OutFile (Join-Path $newDir "bun.exe")
   }
 
   Write-Step "Swapping root runtime files"
@@ -365,7 +223,12 @@ try {
   }
 
   if (-not $useEmbeddedBun) {
-    # Clean up embedded bun artifacts when switching to external mode
+    # Verify external bun is available before cleaning up embedded artifacts
+    $parentBun = Join-Path (Split-Path -Parent $resolvedRoot) "bun.exe"
+    $hasFallbackBun = (Test-Path $parentBun) -or (Get-Command bun -ErrorAction SilentlyContinue)
+    if (-not $hasFallbackBun) {
+      throw "Cannot switch to external bun mode: no bun found in parent directory or PATH."
+    }
     $bunExePath = Join-Path $resolvedRoot "bun.exe"
     if (Test-Path -LiteralPath $bunExePath) {
       Remove-Item -LiteralPath $bunExePath -Force
