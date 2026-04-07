@@ -2,7 +2,7 @@ import { join } from "node:path";
 import type { PackageMeta, ShimDef, ShimRunner } from "./types";
 import { getPackageBaseRelativePath } from "./package-layout";
 import { listPackageMetas, listWinnerPackageMetas } from "./metadata";
-import { ensureDir, removePath, writeText } from "../utils/fs";
+import { ensureDir, pathExists, removePath, writeText } from "../utils/fs";
 import { inferShimRunner } from "../utils/strings";
 
 function renderCmdWrapper(command: string): string {
@@ -198,6 +198,11 @@ export async function ensureStaticRootShims(root: string): Promise<void> {
   await ensureDir(dir);
   await writeText(join(dir, "flget.cmd"), renderRootCmdFlgetShim());
   await writeText(join(dir, "flget.ps1"), renderRootPowerShellFlgetShim());
-  await writeText(join(dir, "bun.cmd"), renderRootCmdBunShim());
-  await writeText(join(dir, "bun.ps1"), renderRootPowerShellBunShim());
+  if (await pathExists(join(root, "bun.exe"))) {
+    await writeText(join(dir, "bun.cmd"), renderRootCmdBunShim());
+    await writeText(join(dir, "bun.ps1"), renderRootPowerShellBunShim());
+  } else {
+    await removePath(join(dir, "bun.cmd"));
+    await removePath(join(dir, "bun.ps1"));
+  }
 }
