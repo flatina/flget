@@ -3,7 +3,6 @@ param(
   [string]$ServerRoot,
   [string]$InstallRoot,
   [string]$BaseUrl,
-  [string]$ExpectedReleaseTag,
   [string]$BunExePath,
   [string]$OutFile
 )
@@ -18,7 +17,6 @@ $setup = Initialize-BaseInstallEnvironment `
   -ServerRoot $ServerRoot `
   -InstallRoot $InstallRoot `
   -BaseUrl $BaseUrl `
-  -ExpectedReleaseTag $ExpectedReleaseTag `
   -BunExePath $BunExePath
 
 # Create a second root (depot server) with runtime files

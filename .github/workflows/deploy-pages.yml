@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'github-pages/**'
+      - 'scripts/prepare-pages.ps1'
+      - 'src/**'
+      - 'package.json'
   workflow_dispatch:
 
 permissions:
@@ -25,11 +28,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build
+        shell: pwsh
+        run: bun run build
+
       - name: Prepare Pages site
         shell: pwsh
         run: |
           $publishRoot = Join-Path $env:RUNNER_TEMP "flget-pages"
           powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\prepare-pages.ps1 -OutputPath $publishRoot
+
+      - name: Download Bun runtimes for Pages
+        shell: pwsh
+        run: |
+          $downloadsDir = Join-Path $env:RUNNER_TEMP "flget-pages\downloads"
+          foreach ($entry in @(
+            @{ Url = "https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip"; Name = "bun.exe" },
+            @{ Url = "https://github.com/oven-sh/bun/releases/latest/download/bun-windows-aarch64.zip"; Name = "bun-arm64.exe" }
+          )) {
+            $zipPath = Join-Path $downloadsDir "bun-tmp.zip"
+            $extractDir = Join-Path $downloadsDir "bun-extract"
+            Invoke-WebRequest -Uri $entry.Url -OutFile $zipPath
+            Expand-Archive -LiteralPath $zipPath -DestinationPath $extractDir -Force
+            $bunExe = Get-ChildItem -Path $extractDir -Filter "bun.exe" -Recurse | Select-Object -First 1
+            Copy-Item $bunExe.FullName (Join-Path $downloadsDir $entry.Name)
+            Remove-Item $zipPath, $extractDir -Recurse -Force
+          }
 
       - name: Publish gh-pages branch
         shell: pwsh

@@ -48,7 +48,7 @@ flget skills install flatina/skills --skill cowsay-ts # install one skill from a
 ```
 - Use a fully-qualified ref such as `ghr:<owner>/<repo>` when you need an exact non-interactive install
 - Update flget itself with `flget update` or `.\update.ps1`
-- `update.ps1` is a stable Pages entrypoint; flget runtime comes from the latest GitHub release zip and Bun is fetched from the latest official Bun release
+- `update.ps1` downloads individual runtime files from Pages (or any `flget serve` instance)
 
 ## 📡 Depot (Distributed Package Source)
 

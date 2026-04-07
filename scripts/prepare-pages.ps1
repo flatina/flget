@@ -51,4 +51,20 @@ $versionJson = @{
 } | ConvertTo-Json
 Set-Content -LiteralPath (Join-Path $publishRoot "version.json") -Encoding UTF8 -Value $versionJson
 
+# Individual runtime files for direct download
+$downloadsDir = Join-Path $publishRoot "downloads"
+New-Item -ItemType Directory -Path $downloadsDir -Force | Out-Null
+
+$distDir = Join-Path $repoRoot "dist"
+foreach ($name in @("flget.js", "flget.js.map")) {
+  $source = Join-Path $distDir $name
+  if (-not (Test-Path $source)) {
+    throw "Build artifact not found: $source (run 'bun run build' first)"
+  }
+  Copy-Item $source (Join-Path $downloadsDir $name)
+}
+foreach ($name in @("activate.ps1", "update.ps1")) {
+  Copy-Item (Join-Path $repoRoot "github-pages\$name") (Join-Path $downloadsDir $name)
+}
+
 Write-Host "Prepared Pages root: $publishRoot"

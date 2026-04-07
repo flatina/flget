@@ -79,26 +79,6 @@ function Initialize-GitRepo {
   & git -C $RepoPath commit -m "init" | Out-Null
 }
 
-function New-ReleaseMetadataJson {
-  param(
-    [string]$Tag,
-    [string]$ArchiveUrl
-  )
-
-  return (@{
-    tag_name = $Tag
-    name = $Tag
-    draft = $false
-    prerelease = $false
-    assets = @(
-      @{
-        name = "flget-win-x64.zip"
-        browser_download_url = $ArchiveUrl
-      }
-    )
-  } | ConvertTo-Json -Depth 5)
-}
-
 function New-ScoopManifestJson {
   param(
     [string]$Version,
@@ -129,7 +109,6 @@ function Initialize-BaseInstallEnvironment {
     [string]$ServerRoot,
     [string]$InstallRoot,
     [string]$BaseUrl,
-    [string]$ExpectedReleaseTag,
     [string]$BunExePath,
     [hashtable]$ExtraAssetFiles = @{}
   )
@@ -143,49 +122,24 @@ function Initialize-BaseInstallEnvironment {
   Ensure-Directory $resolvedInstallRoot
 
   $downloadsRoot = Join-Path $resolvedServerRoot "downloads"
-  $bunRoot = Join-Path $resolvedServerRoot "bun"
   $assetsRoot = Join-Path $resolvedServerRoot "assets"
-  $releaseMetaLatestRoot = Join-Path $resolvedServerRoot "repos\flatina\flget\releases"
-  $releaseMetaTagRoot = Join-Path $releaseMetaLatestRoot "tags"
 
   Ensure-Directory $downloadsRoot
-  Ensure-Directory $bunRoot
   Ensure-Directory $assetsRoot
-  Ensure-Directory $releaseMetaTagRoot
 
   foreach ($file in @("index.html", "update.ps1", "bootstrap.ps1")) {
     Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "github-pages\$file") -Destination (Join-Path $resolvedServerRoot $file) -Force
   }
   Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "LICENSE") -Destination (Join-Path $resolvedServerRoot "LICENSE") -Force
 
-  $runtimeStageRoot = Join-Path $resolvedServerRoot "runtime-stage"
-  Ensure-Directory $runtimeStageRoot
+  # Individual runtime files for direct download
   foreach ($file in @("flget.js", "flget.js.map")) {
-    Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "dist\$file") -Destination (Join-Path $runtimeStageRoot $file) -Force
+    Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "dist\$file") -Destination (Join-Path $downloadsRoot $file) -Force
   }
   foreach ($file in @("activate.ps1", "update.ps1")) {
-    Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "github-pages\$file") -Destination (Join-Path $runtimeStageRoot $file) -Force
+    Copy-Item -LiteralPath (Join-Path $resolvedRepoRoot "github-pages\$file") -Destination (Join-Path $downloadsRoot $file) -Force
   }
-
-  $runtimeArchivePath = Join-Path $downloadsRoot "flget-win-x64.zip"
-  Push-Location $runtimeStageRoot
-  try {
-    Compress-Archive -Path * -DestinationPath $runtimeArchivePath -CompressionLevel Optimal -Force
-  } finally {
-    Pop-Location
-  }
-
-  $bunStageRoot = Join-Path $resolvedServerRoot "bun-stage"
-  Ensure-Directory $bunStageRoot
-  Copy-Item -LiteralPath $BunExePath -Destination (Join-Path $bunStageRoot "bun.exe") -Force
-
-  $bunArchivePath = Join-Path $bunRoot "bun-windows-x64.zip"
-  Push-Location $bunStageRoot
-  try {
-    Compress-Archive -Path * -DestinationPath $bunArchivePath -CompressionLevel Optimal -Force
-  } finally {
-    Pop-Location
-  }
+  Copy-Item -LiteralPath $BunExePath -Destination (Join-Path $downloadsRoot "bun.exe") -Force
 
   $baseAssetFiles = @{
     "fldemo.cmd" = (Join-Path $resolvedRepoRoot "tests\assets\scoop\fldemo.cmd")
@@ -230,10 +184,6 @@ function Initialize-BaseInstallEnvironment {
   Ensure-Directory $installCompatDir
   Copy-Item -LiteralPath $compatTarball -Destination (Join-Path $installCompatDir "github-com-flatina-flget-compat.tar.gz") -Force
 
-  $releaseMetadata = New-ReleaseMetadataJson -Tag $ExpectedReleaseTag -ArchiveUrl "$normalizedBaseUrl/downloads/flget-win-x64.zip"
-  Write-Utf8NoBom -Path (Join-Path $releaseMetaLatestRoot "latest") -Content $releaseMetadata
-  Write-Utf8NoBom -Path (Join-Path $releaseMetaTagRoot $ExpectedReleaseTag) -Content $releaseMetadata
-
   return @{
     baseUrl = $normalizedBaseUrl
     installRoot = $resolvedInstallRoot
@@ -241,11 +191,6 @@ function Initialize-BaseInstallEnvironment {
     assetsRoot = $assetsRoot
     bucketTarball = $bucketTarball
     compatTarball = $compatTarball
-    env = @{
-      FLGET_RELEASE_API_BASE_URL = $normalizedBaseUrl
-      FLGET_RELEASE_OWNER = "flatina"
-      FLGET_RELEASE_REPO = "flget"
-      FLGET_BUN_DOWNLOAD_BASE_URL = "$normalizedBaseUrl/bun"
-    }
+    env = @{}
   }
 }
