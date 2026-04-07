@@ -54,10 +54,65 @@ describe("ensureRootScripts", () => {
     const flgetCmd = await readFile(join(root, "shims", "flget.cmd"), "utf8");
     expect(flgetCmd).toContain("%SHIMDIR%\\..\\flget.js");
 
+    // bun shims should NOT exist when bun.exe is absent (external bun mode)
+    expect(await Bun.file(join(root, "shims", "bun.cmd")).exists()).toBe(false);
+    expect(await Bun.file(join(root, "shims", "bun.ps1")).exists()).toBe(false);
+  });
+
+  test("cleans up stale bun shims when switching from embedded to external mode", async () => {
+    const root = await mkdtemp(join(tmpdir(), "flget-bun-mode-"));
+    await ensureRootInitialized(root);
+
+    // Simulate embedded mode: create bun.exe and bun shims
+    await writeFile(join(root, "bun.exe"), "fake-bun");
+    await ensureRootScripts(root);
+    expect(await Bun.file(join(root, "shims", "bun.cmd")).exists()).toBe(true);
+    expect(await Bun.file(join(root, "shims", "bun.ps1")).exists()).toBe(true);
+
+    // Switch to external mode: remove bun.exe, regenerate
+    const { unlink } = await import("node:fs/promises");
+    await unlink(join(root, "bun.exe"));
+    await ensureRootScripts(root);
+
+    // bun shims should be removed
+    expect(await Bun.file(join(root, "shims", "bun.cmd")).exists()).toBe(false);
+    expect(await Bun.file(join(root, "shims", "bun.ps1")).exists()).toBe(false);
+
+    // flget shims should still exist
+    expect(await Bun.file(join(root, "shims", "flget.cmd")).exists()).toBe(true);
+    expect(await Bun.file(join(root, "shims", "flget.ps1")).exists()).toBe(true);
+  });
+
+  test("creates bun shims when bun.exe is present (embedded mode)", async () => {
+    const root = await mkdtemp(join(tmpdir(), "flget-bun-embedded-"));
+    await ensureRootInitialized(root);
+
+    await writeFile(join(root, "bun.exe"), "fake-bun");
+    await ensureRootScripts(root);
+
     const bunCmd = await readFile(join(root, "shims", "bun.cmd"), "utf8");
     expect(bunCmd).toContain("%SHIMDIR%\\..\\bun.exe");
 
     const bunPs1 = await readFile(join(root, "shims", "bun.ps1"), "utf8");
     expect(bunPs1).toContain('Join-Path $PSScriptRoot "..\\bun.exe"');
+
+    const flgetCmd = await readFile(join(root, "shims", "flget.cmd"), "utf8");
+    expect(flgetCmd).toContain("%SHIMDIR%\\..\\flget.js");
+  });
+
+  test("creates bun shims when switching from external to embedded mode", async () => {
+    const root = await mkdtemp(join(tmpdir(), "flget-bun-ext-to-emb-"));
+    await ensureRootInitialized(root);
+
+    // Start external: no bun.exe
+    await ensureRootScripts(root);
+    expect(await Bun.file(join(root, "shims", "bun.cmd")).exists()).toBe(false);
+
+    // Switch to embedded: add bun.exe, regenerate
+    await writeFile(join(root, "bun.exe"), "fake-bun");
+    await ensureRootScripts(root);
+
+    expect(await Bun.file(join(root, "shims", "bun.cmd")).exists()).toBe(true);
+    expect(await Bun.file(join(root, "shims", "bun.ps1")).exists()).toBe(true);
   });
 });

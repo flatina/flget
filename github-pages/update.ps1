@@ -3,6 +3,7 @@ param(
   [string]$BaseUrl = "https://flatina.github.io/flget",
   [string]$RootPath,
   [switch]$ApplyDownloadedUpdate,
+  [switch]$ExternalBun,
   [string]$ReleaseTag
 )
 
@@ -204,10 +205,36 @@ function Invoke-WithRetry {
   }
 }
 
+function Test-EmbeddedBunMode {
+  param([string]$Root)
+  return Test-Path (Join-Path $Root "shims\bun.cmd")
+}
+
+function Resolve-Bun {
+  param([string]$Root)
+
+  $rootBun = Join-Path $Root "bun.exe"
+  if (Test-Path $rootBun) {
+    return [System.IO.Path]::GetFullPath($rootBun)
+  }
+
+  $parentBun = Join-Path (Split-Path -Parent $Root) "bun.exe"
+  if (Test-Path $parentBun) {
+    return [System.IO.Path]::GetFullPath($parentBun)
+  }
+
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
+  }
+
+  throw "bun.exe not found in the flget root, its parent directory, or PATH."
+}
+
 function Invoke-EnvRefresh {
   param([string]$Root)
 
-  $bunExe = Join-Path $Root "bun.exe"
+  $bunExe = Resolve-Bun -Root $Root
   $cliPath = Join-Path $Root "flget.js"
   & $bunExe $cliPath cache refresh
   if ($LASTEXITCODE -ne 0) {
@@ -223,7 +250,7 @@ function Invoke-BucketBootstrap {
     return
   }
 
-  $bunExe = Join-Path $Root "bun.exe"
+  $bunExe = Resolve-Bun -Root $Root
   $cliPath = Join-Path $Root "flget.js"
   & $bunExe $cliPath bucket update | Out-Null
   if ($LASTEXITCODE -ne 0) {
@@ -239,7 +266,7 @@ function Invoke-CompatBootstrap {
     return
   }
 
-  $bunExe = Join-Path $Root "bun.exe"
+  $bunExe = Resolve-Bun -Root $Root
   $cliPath = Join-Path $Root "flget.js"
   & $bunExe $cliPath compat update | Out-Null
   if ($LASTEXITCODE -ne 0) {
@@ -260,7 +287,7 @@ if (-not $ApplyDownloadedUpdate) {
   Write-Step "Downloading latest update script"
   Download-File -Url "$normalizedBaseUrl/update.ps1" -OutFile $latestScript
 
-  & $latestScript -RootPath $resolvedRoot -BaseUrl $normalizedBaseUrl -ApplyDownloadedUpdate -ReleaseTag $ReleaseTag
+  & $latestScript -RootPath $resolvedRoot -BaseUrl $normalizedBaseUrl -ApplyDownloadedUpdate -ExternalBun:$ExternalBun -ReleaseTag $ReleaseTag
   exit $LASTEXITCODE
 }
 
@@ -273,13 +300,14 @@ $cleanupSession = $true
 Ensure-Directory $newDir
 Ensure-Directory $oldDir
 
-$rootFiles = @(
-  "flget.js",
-  "flget.js.map",
-  "bun.exe",
-  "activate.ps1",
-  "update.ps1"
-)
+# Determine bun mode: -ExternalBun flag overrides; otherwise detect from existing shims
+$isExistingInstall = Test-Path (Join-Path $resolvedRoot "flget.js")
+$useEmbeddedBun = (-not $ExternalBun) -and ((-not $isExistingInstall) -or (Test-EmbeddedBunMode -Root $resolvedRoot))
+
+$rootFiles = @("flget.js", "flget.js.map", "activate.ps1", "update.ps1")
+if ($useEmbeddedBun) {
+  $rootFiles += "bun.exe"
+}
 
 $movedOld = New-Object System.Collections.Generic.List[string]
 $movedNew = New-Object System.Collections.Generic.List[string]
@@ -294,10 +322,12 @@ try {
   Download-File -Url (Get-RequiredReleaseAssetUrl -Release $release -Name (Get-ReleaseArchiveName)) -OutFile $runtimeArchive
   Expand-ArchiveSilent -Path $runtimeArchive -DestinationPath $archiveExtract
 
-  Write-Step "Downloading latest Bun runtime"
-  $bunArchive = Join-Path $sessionDir "bun-runtime.zip"
-  Download-File -Url "$(Get-BunDownloadBaseUrl)/$(Get-BunAssetName)" -OutFile $bunArchive
-  Expand-BunRuntime -ArchivePath $bunArchive -DestinationPath $newDir
+  if ($useEmbeddedBun) {
+    Write-Step "Downloading latest Bun runtime"
+    $bunArchive = Join-Path $sessionDir "bun-runtime.zip"
+    Download-File -Url "$(Get-BunDownloadBaseUrl)/$(Get-BunAssetName)" -OutFile $bunArchive
+    Expand-BunRuntime -ArchivePath $bunArchive -DestinationPath $newDir
+  }
 
   foreach ($name in $rootFiles) {
     if ($name -eq "bun.exe") {
@@ -332,6 +362,20 @@ try {
       Move-Item -LiteralPath $stagedPath -Destination $targetPath -Force
     }
     [void]$movedNew.Add($name)
+  }
+
+  if (-not $useEmbeddedBun) {
+    # Clean up embedded bun artifacts when switching to external mode
+    $bunExePath = Join-Path $resolvedRoot "bun.exe"
+    if (Test-Path -LiteralPath $bunExePath) {
+      Remove-Item -LiteralPath $bunExePath -Force
+    }
+    foreach ($shimName in @("bun.cmd", "bun.ps1")) {
+      $shimPath = Join-Path $resolvedRoot "shims\$shimName"
+      if (Test-Path -LiteralPath $shimPath) {
+        Remove-Item -LiteralPath $shimPath -Force
+      }
+    }
   }
 
   Write-Step "Refreshing root env caches"

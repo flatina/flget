@@ -90,7 +90,7 @@ if (Test-Path $rootBun) {
 exit $LASTEXITCODE
 '@
 }
-if (-not (Test-Path "$PSScriptRoot\shims\bun.cmd")) {
+if ((Test-Path "$PSScriptRoot\bun.exe") -and -not (Test-Path "$PSScriptRoot\shims\bun.cmd")) {
   Set-Content -LiteralPath "$PSScriptRoot\shims\bun.cmd" -Encoding ASCII -Value @"
 @echo off
 setlocal
@@ -112,7 +112,7 @@ if "%BUN%"=="bun" (
 )
 "@
 }
-if (-not (Test-Path "$PSScriptRoot\shims\bun.ps1")) {
+if ((Test-Path "$PSScriptRoot\bun.exe") -and -not (Test-Path "$PSScriptRoot\shims\bun.ps1")) {
   Set-Content -LiteralPath "$PSScriptRoot\shims\bun.ps1" -Encoding ASCII -Value @'
 $rootBun = Join-Path $PSScriptRoot "..\bun.exe"
 $parentBun = Join-Path $PSScriptRoot "..\..\bun.exe"
@@ -131,6 +131,14 @@ if (Test-Path $rootBun) {
 & $bun @args
 exit $LASTEXITCODE
 '@
+} elseif (-not (Test-Path "$PSScriptRoot\bun.exe")) {
+  # External bun mode: clean up stale bun shims from a previous embedded install
+  foreach ($shimName in @("bun.cmd", "bun.ps1")) {
+    $shimPath = Join-Path $PSScriptRoot "shims\$shimName"
+    if (Test-Path -LiteralPath $shimPath) {
+      Remove-Item -LiteralPath $shimPath -Force
+    }
+  }
 }
 
 if (Test-Path "$PSScriptRoot\flget.js") {
