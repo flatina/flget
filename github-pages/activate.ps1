@@ -1,4 +1,5 @@
 $ProgressPreference = "SilentlyContinue"
+$SCRIPT_VERSION = 1
 
 function Resolve-FlgetBun {
   $rootBun = Join-Path $PSScriptRoot "bun.exe"

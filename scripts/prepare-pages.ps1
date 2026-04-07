@@ -43,4 +43,12 @@ foreach ($asset in $assets) {
 }
 
 Set-Content -LiteralPath (Join-Path $publishRoot ".nojekyll") -Value "" -NoNewline
+
+$packageJson = Get-Content (Join-Path $repoRoot "package.json") | ConvertFrom-Json
+$versionJson = @{
+  scriptVersion = 1
+  flgetVersion = $packageJson.version
+} | ConvertTo-Json
+Set-Content -LiteralPath (Join-Path $publishRoot "version.json") -Encoding UTF8 -Value $versionJson
+
 Write-Host "Prepared Pages root: $publishRoot"

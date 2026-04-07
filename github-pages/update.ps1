@@ -9,6 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 $ProgressPreference = "SilentlyContinue"
+$SCRIPT_VERSION = 1
 
 function New-SessionId {
   $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString("x")
