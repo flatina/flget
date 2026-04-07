@@ -27,6 +27,9 @@ powershell -c "irm https://flatina.github.io/flget/update.ps1 -OutFile .\update.
 
 # update flget
 .\update.ps1
+
+# use system bun instead of embedded (no bun.exe download)
+.\update.ps1 -ExternalBun
 ```
 
 ## ⚡ Quick Start
@@ -323,14 +326,16 @@ shims:
 
 ## 🛠️ Troubleshooting
 
-- `shims/flget.*` or `shims/bun.*` is missing
+- `shims/flget.*` is missing
   - Run `.\activate.ps1`.
 - Update the root runtime files
   - Run `flget update` or `.\update.ps1`.
 - Fresh root cannot search Scoop packages
   - Run `flget bucket update` to download bucket data.
-- `bun.exe` is missing from the root
-  - `flget` tries root, parent, then system `bun`.
+- Bun runtime resolution
+  - `flget` tries root `bun.exe`, then parent `bun.exe`, then system `bun`.
+  - Embedded mode (default): `bun.exe` in root, `shims/bun.*` created.
+  - External mode (`-ExternalBun`): no root `bun.exe`, no bun shims, uses system bun.
 - Same app id exists in multiple sources
   - Last installed wins. Use `flget reset <id> --source <source>`.
 - Disable package install scripts
